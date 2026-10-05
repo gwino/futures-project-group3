@@ -151,3 +151,12 @@ The project runs for four weeks, with Week 4 reserved for the presentation and f
 | 4 — Present and deliver | Gabriella reproduces the documented workflow; all members resolve final problems, review the report and slides, rehearse their speaking sections, and present and submit the project. | Final report and presentation delivered; run instructions verified; numerical claims trace to saved outputs; each member's contributions and reviews are visible in the repository. |
 
 To keep the schedule feasible, sensitivity checks will use a small predefined set of parameter and cost settings. Data-access problems and scope changes should be resolved in Week 1 and reflected in this README. Each member will review the README PR and record agreement or specific feedback; the team will confirm a shared communication channel and check progress weekly.
+
+## Task Tracking
+
+Tasks are tracked as [GitHub Issues](https://github.com/gwino/futures-project-group3/issues) and grouped into [milestones](https://github.com/gwino/futures-project-group3/milestones). Each issue lists a proposed owner, reviewer, dependencies, and "Done when" criteria. Comment on an issue to claim or swap it, and reference the issue in related PRs (for example, `Closes #5`).
+
+- **Week 1 – Scope & Data:** [#2 Team agreement](https://github.com/gwino/futures-project-group3/issues/2), [#3 Environment setup](https://github.com/gwino/futures-project-group3/issues/3), [#4 Scope decisions](https://github.com/gwino/futures-project-group3/issues/4), [#5 Data download](https://github.com/gwino/futures-project-group3/issues/5)
+- **Week 2 – Data Exploration & Planning:** [#6 Data cleaning](https://github.com/gwino/futures-project-group3/issues/6), [#7 Contract rolls](https://github.com/gwino/futures-project-group3/issues/7), [#8 Data exploration](https://github.com/gwino/futures-project-group3/issues/8), [#9 Plan strategy and evaluation tasks](https://github.com/gwino/futures-project-group3/issues/9)
+
+Strategy, backtesting, evaluation, and reporting tasks will be opened from #9 once the team has reviewed the data findings in #8, so the later work is designed around the actual data.
