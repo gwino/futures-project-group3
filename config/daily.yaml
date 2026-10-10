@@ -1,0 +1,8 @@
+dataset: GLBX.MDP3
+schema: ohlcv-1d
+symbols:
+  - CLZ4
+stype_in: raw_symbol
+start: "2024-11-01"
+end: "2024-11-08"
+output: data/raw/clz4_daily_sample.dbn

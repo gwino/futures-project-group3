@@ -1,0 +1,7 @@
+dataset: GLBX.MDP3
+schema: ohlcv-1d
+symbols: CL.FUT
+stype_in: parent
+start: "2010-06-06"
+end: "2026-10-08"
+output: data/raw/crude_oil_all_daily.dbn
