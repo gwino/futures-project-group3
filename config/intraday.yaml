@@ -1,0 +1,7 @@
+dataset: GLBX.MDP3
+schema: ohlcv-1m
+symbols: CL.FUT
+stype_in: parent
+start: "2025-01-01"
+end: "2026-10-08"
+output: data/raw/crude_oil_conflict_1m.dbn

@@ -1,0 +1,16 @@
+{
+  "config": "config/intraday.yaml",
+  "query": {
+    "dataset": "GLBX.MDP3",
+    "schema": "ohlcv-1m",
+    "symbols": "CL.FUT",
+    "stype_in": "parent",
+    "start": "2025-01-01",
+    "end": "2026-10-08",
+    "output": "data/raw/crude_oil_conflict_1m.dbn"
+  },
+  "downloaded_at_utc": "2026-10-10T17:20:24.004826+00:00",
+  "file": "data/raw/crude_oil_conflict_1m.dbn",
+  "sha256": "3cefb2456d9fc6f7747bd9d8c8bc77ab9d6572b0d4c6e5c759a9b7db07ae7728",
+  "python": "3.11.13"
+}
