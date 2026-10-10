@@ -1,0 +1,16 @@
+{
+  "config": "config/crude_oil_daily_all.yaml",
+  "query": {
+    "dataset": "GLBX.MDP3",
+    "schema": "ohlcv-1d",
+    "symbols": "CL.FUT",
+    "stype_in": "parent",
+    "start": "2010-06-06",
+    "end": "2026-10-08",
+    "output": "data/raw/crude_oil_all_daily.dbn"
+  },
+  "downloaded_at_utc": "2026-10-08T23:39:16.379725+00:00",
+  "file": "data/raw/crude_oil_all_daily.dbn",
+  "sha256": "887c43f24ed065b1236a7186834b9293d9126a020b20ec5582773d719bd45850",
+  "python": "3.11.13"
+}
