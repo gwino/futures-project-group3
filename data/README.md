@@ -139,6 +139,8 @@ Settings are in `config/prepare_intraday.yaml`. The contract pattern, holiday ca
 
 ### Intraday findings for strategy design
 
+The full exploration, including liquidity and volatility by time of day, autocorrelation, and trading costs, is in `analysis/02.5_intraday_data_exploration.ipynb`.
+
 - **Quality.** No missing values, duplicates, OHLC inconsistencies, zero-volume bars, or non-positive prices. Every trade date in the window has outright data. 4,614 bars fall on Databento degraded dates and are flagged.
 - **Window coverage.** 442 of 443 trade dates have all 22 window bars. The exception is 2025-12-24 (early close, 19 bars), so its cutoff bar is at 12:45 CT.
 - **Liquidity.** The window holds 53.4% of the held contract's volume, so most trading happens in the hours where the intraday strategy can trade.
