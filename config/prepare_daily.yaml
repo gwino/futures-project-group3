@@ -1,0 +1,72 @@
+# Settings for src/prepare_daily_data.py.
+# Session and roll values are proposals pending #4 (Scope decisions).
+
+input: data/raw/crude_oil_all_daily.dbn
+# Databento continuous series (CL.v.0 volume roll, CL.c.0 calendar roll), used only as a cross-check.
+continuous_check: data/raw/crude_oil_continuous_daily.dbn
+output_dir: data/processed
+
+session:
+  timezone: America/Chicago
+  # Databento ohlcv-1d bars cover UTC calendar days. Each bar is assigned to the CME trade date
+  # with the same calendar date; bars dated on weekends or CME holidays (early-halt sessions
+  # whose trades settle on the next trade date) are folded into the next trade date.
+  close_time: "16:00"   # Globex daily halt; used to timestamp each daily bar
+  fold_non_trading_days: true
+  # CME holidays without a CL settlement. Juneteenth has been a CME holiday since 2022.
+  juneteenth_from: "2022-06-19"
+
+contracts:
+  # Outright WTI contracts only: month code plus a one- or two-digit year (e.g. CLZ9, CLZ30).
+  symbol_pattern: "^CL[FGHJKMNQUVXZ][0-9]{1,2}$"
+
+roll:
+  # days_before_expiry: hold the nearest contract until `days_before_expiry` trade dates before
+  #   its last trade date, then switch to the next contract at that date's session.
+  # volume_crossover: switch the session after the next contract's volume first exceeds the
+  #   held contract's volume, but no later than `days_before_expiry` trade dates before expiry.
+  rule: days_before_expiry
+  days_before_expiry: 3
+  adjustment: additive   # additive (difference) back-adjustment; ratio is unsafe with April 2020 negative prices
+
+quality:
+  # Flag a close-to-close change as an outlier when it exceeds this multiple of the
+  # contract's rolling median absolute change. Flags are reported, never removed.
+  outlier_window: 60
+  outlier_threshold: 12
+
+# Dates reported as "degraded" by Databento metadata.get_dataset_condition for GLBX.MDP3
+# (queried 2026-10-10 for 2010-06-06 to 2026-10-07).
+degraded_dates:
+  - "2014-06-11"
+  - "2014-06-12"
+  - "2014-06-13"
+  - "2014-06-15"
+  - "2014-09-22"
+  - "2014-09-23"
+  - "2014-09-24"
+  - "2014-09-25"
+  - "2017-11-13"
+  - "2018-10-21"
+  - "2019-01-15"
+  - "2019-02-22"
+  - "2019-03-13"
+  - "2019-03-26"
+  - "2020-02-27"
+  - "2020-02-28"
+  - "2020-05-05"
+  - "2020-06-30"
+  - "2020-07-01"
+  - "2021-12-05"
+  - "2022-01-02"
+  - "2024-09-18"
+  - "2025-09-17"
+  - "2025-09-24"
+  - "2025-11-28"
+  - "2026-01-31"
+  - "2026-03-15"
+  - "2026-03-16"
+  - "2026-03-21"
+  - "2026-04-10"
+  - "2026-05-24"
+  - "2026-08-29"
