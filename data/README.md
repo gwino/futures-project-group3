@@ -87,3 +87,60 @@ The steps are described in full in `reports/methodology.md`.
 - **Assumed holiday calendar.** The CME holiday calendar is built from rules, including Juneteenth from 2022. The fact that computed expiries match the data for all 169 contracts supports it, but it is not an official CME file.
 - **Negative prices.** CLK2020 traded below zero on 2020-04-20 (close −2.67, low −40.32). The held series rolled out of that contract on 2020-04-16, so it is unaffected. The per-contract file keeps those sessions.
 - **Daily data only.** Intraday analysis (15-minute bars, volume by time of day) needs `ohlcv-1m` data, which has not been downloaded yet.
+
+## Intraday data
+
+### Provenance
+
+| Item | Value |
+|---|---|
+| Dataset | `GLBX.MDP3`, schema `ohlcv-1m`, parent `CL.FUT` (`stype_in: parent`) |
+| Requested range | 2025-01-01 to 2026-10-08 (end exclusive); complete trade dates run from 2025-01-02 to 2026-10-07 |
+| Raw file | `raw/crude_oil_conflict_1m.dbn` (Git LFS), created by `src/download_data.py --config config/intraday.yaml` |
+
+### Files
+
+| File | Created by | Description |
+|---|---|---|
+| `processed/cl_intraday_15m_contracts.parquet` | `python -m src.prepare_intraday_data` | Validated 15-minute bars for each of the 71 outright contracts (456,260 bars). |
+| `processed/cl_intraday_15m_continuous.parquet` | same | The held contract's 15-minute bars (41,740 bars), with raw and back-adjusted prices and the trading-window flags. |
+| `processed/cl_session_daily_contracts.parquet` | same | CME session bars (17:00 to 16:00 CT) for each contract, built from the 1-minute data. |
+| `processed/cl_session_daily_continuous.parquet` | same | One row per trade date for the held contract (443 trade dates); the daily horizon for the common window. |
+| `processed/cl_intraday_roll_calendar.csv` | same | One row per roll (21 rolls), with the session-close gap (`gap`) and the 15-minute gap (`intraday_gap`). |
+| `processed/cl_intraday_window_coverage.csv` | same | Number of held-contract bars inside the trading window on each trade date. |
+| `processed/cl_intraday_quality_summary.csv` | same | Data-quality checks and their results. |
+| `processed/cl_intraday_prepare.manifest.json` | same | Settings plus SHA256 of the input and every output. |
+| `../reports/figures/intraday_roll_examples.png` | same | Raw and back-adjusted prices around three rolls. |
+
+Settings are in `config/prepare_intraday.yaml`. The contract pattern, holiday calendar, roll rule, and degraded dates are read from `config/prepare_daily.yaml`, so both horizons use the same trade dates and roll on the same sessions. Run `src/prepare_daily_data.py` first to enable the roll cross-check against `cl_daily_roll_calendar.csv`.
+
+### Session and bar rules (#4)
+
+1. Keep outright contracts only (same pattern as the daily pipeline). Symbols are mapped from the file's instrument mappings, which loads the 15.2 million rows in seconds.
+2. Assign each minute to the CME trade date whose session it belongs to: a session runs from 17:00 CT on the prior day to 16:00 CT. Holiday sessions fold into the next trade date. Minutes stamped in the 16:00 to 17:00 CT halt (2 one-lot trades) and the partial evening session of 2026-10-08 are dropped.
+3. Aggregate to 15-minute bars. Databento's 1-minute `ts_event` marks the start of each minute, so bins are left-closed and labeled by their end time (`closed="left", label="right"`): the bar stamped 08:15 covers 08:00:00 to 08:14:59. Bins are cut on the UTC clock, so the repeated hour at the end of daylight saving time is not merged. Empty bars are dropped, not forward-filled.
+4. Mark the trading window: `in_trade_window` is true for bars from 08:00 to 13:30 CT on the trade date itself (22 bars), and `is_cutoff_bar` marks the last of them, where intraday positions are flattened. Evening-session bars and folded holiday bars are outside the window.
+5. Roll on the same trade dates as the daily pipeline (3 trade dates before expiry; all 21 rolls match `cl_daily_roll_calendar.csv`). The held contract changes at the 17:00 CT open of the roll date. Signal prices are additively back-adjusted using the gap at the last 15-minute bar before the roll session where both contracts traded; it equals the session-close gap for every roll.
+
+### Intraday schema
+
+`cl_intraday_15m_continuous.parquet` uses the same columns as `cl_daily_continuous.parquet`, with these differences:
+
+| Column | Type | Meaning |
+|---|---|---|
+| `timestamp` | datetime, America/Chicago | End of the 15-minute bar |
+| `trade_date` | date | CME trade date of the session the bar belongs to |
+| `in_trade_window` | bool | Bar lies inside 08:00 to 13:30 CT on its trade date |
+| `is_cutoff_bar` | bool | Last window bar of the trade date (13:30 CT, or earlier on early-close days) |
+| `minutes` | int | Number of 1-minute bars in the 15-minute bar |
+| `outlier_flag` | bool | Close-to-close change exceeds 15× the contract's rolling median absolute change over the previous 920 bars |
+
+`cl_session_daily_continuous.parquet` has the same columns as `cl_daily_continuous.parquet`, except that `source_minutes` replaces `source_bars` and there are no outlier or degraded flags. Its `timestamp` (16:00 CT) is the true end of the session, and its `close` is the last trade before 16:00 CT.
+
+### Intraday findings for strategy design
+
+- **Quality.** No missing values, duplicates, OHLC inconsistencies, zero-volume bars, or non-positive prices. Every trade date in the window has outright data. 4,614 bars fall on Databento degraded dates and are flagged.
+- **Window coverage.** 442 of 443 trade dates have all 22 window bars. The exception is 2025-12-24 (early close, 19 bars), so its cutoff bar is at 12:45 CT.
+- **Liquidity.** The window holds 53.4% of the held contract's volume, so most trading happens in the hours where the intraday strategy can trade.
+- **Outliers.** 125 held-contract bars are flagged, and all of them are matched by a same-direction move in the next listed month at the same time, so they are market moves rather than bad prints. The most common bar is 17:15 CT (30 of 125), whose close-to-close change spans the daily halt or the weekend; 70% of the flagged bars fall outside the trading window.
+- **Common-window split.** A 70/30 split of the 443 common trade dates puts the cutoff at 2026-03-27 (last development date) / 2026-03-30 (first holdout date).
