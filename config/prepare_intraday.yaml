@@ -1,0 +1,36 @@
+# Settings for src/prepare_intraday_data.py. Session, bar, and roll settings follow #4.
+
+input: data/raw/crude_oil_conflict_1m.dbn
+# Contract pattern, holiday calendar, roll rule, and degraded dates are shared with the daily
+# pipeline so both horizons use the same trade dates and roll on the same sessions.
+daily_config: config/prepare_daily.yaml
+# Written by `python -m src.prepare_daily_data --config config/prepare_daily.yaml`; run that first.
+# The intraday step uses it to cross-check its roll dates and reports the check as skipped if it is missing.
+daily_roll_calendar: data/processed/cl_daily_roll_calendar.csv
+output_dir: data/processed
+figure_dir: reports/figures
+
+session:
+  timezone: America/Chicago
+  # A trade date runs from open_time on the prior calendar day to close_time. Minutes stamped
+  # between close_time and open_time (after the daily halt) are dropped and counted.
+  open_time: "17:00"
+  close_time: "16:00"
+  # New positions from trade_window_start; all positions flat at the trade_window_end bar close.
+  trade_window_start: "08:00"
+  trade_window_end: "13:30"
+
+bars:
+  # Databento 1-minute ts_event marks the start of each minute, so bars are built with
+  # closed="left" and labeled by their end time (label="right").
+  frequency: 15min
+
+quality:
+  # Flag a close-to-close change as an outlier when it exceeds this multiple of the contract's
+  # rolling median absolute change over the previous outlier_window bars (about 10 sessions).
+  # Flags are reported, never removed.
+  outlier_window: 920
+  outlier_threshold: 15
+
+# Share of trade dates in the common window used for development (the rest is the holdout).
+development_share: 0.7
