@@ -4,7 +4,8 @@ input: data/raw/crude_oil_conflict_1m.dbn
 # Contract pattern, holiday calendar, roll rule, and degraded dates are shared with the daily
 # pipeline so both horizons use the same trade dates and roll on the same sessions.
 daily_config: config/prepare_daily.yaml
-# Optional cross-check: roll dates from src/prepare_daily_data.py, if it has been run.
+# Written by `python -m src.prepare_daily_data --config config/prepare_daily.yaml`; run that first.
+# The intraday step uses it to cross-check its roll dates and reports the check as skipped if it is missing.
 daily_roll_calendar: data/processed/cl_daily_roll_calendar.csv
 output_dir: data/processed
 figure_dir: reports/figures

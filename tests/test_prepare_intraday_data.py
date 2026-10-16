@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 from src.prepare_daily_data import cme_holidays, trade_calendar
-from src.prepare_intraday_data import aggregate_bars, assign_trade_dates, flag_trade_window
+from src.prepare_intraday_data import aggregate_bars, assign_trade_dates, flag_trade_window, session_coverage
 
 TZ = "America/Chicago"
 
@@ -90,3 +90,27 @@ def test_trade_window_covers_0800_to_1330_on_the_trade_date():
 		}
 	)
 	assert flag_trade_window(bars, TZ, "08:00", "13:30", "15min").tolist() == [False, True, True, False, False]
+
+
+def test_session_coverage_counts_missing_bars_and_longest_gap():
+	# The market trades in six bars on day 1 and two on day 2; bars 3 and 4 are inside the window.
+	day1, day2 = pd.Timestamp("2025-11-04"), pd.Timestamp("2025-11-05")
+	ends = pd.date_range("2025-11-04 14:00", periods=6, freq="15min", tz="UTC")
+	market = [(1, day1, end, 2 <= i <= 3) for i, end in enumerate(ends)]
+	sparse = [(2, day1, ends[0], False), (2, day1, ends[3], True), (2, day1, ends[5], False)]
+	next_day = pd.date_range("2025-11-05 14:00", periods=2, freq="15min", tz="UTC")
+	market += [(1, day2, end, False) for end in next_day]
+	bars = pd.DataFrame(market + sparse, columns=["instrument_id", "trade_date", "bar_end", "in_trade_window"])
+	contracts = pd.DataFrame(
+		{"instrument_id": [1, 2], "contract_id": ["CLZ2025", "CLF2026"], "first_date": [day1, day1], "last_date": [day2, day2]}
+	)
+	coverage = session_coverage(bars, contracts).set_index(["contract_id", "trade_date"])
+
+	full = coverage.loc[("CLZ2025", day1)]
+	assert (full["expected_bars"], full["observed_bars"], full["missing_bars"], full["longest_gap_bars"]) == (6, 6, 0, 0)
+	sparse_day = coverage.loc[("CLF2026", day1)]
+	assert (sparse_day["observed_bars"], sparse_day["missing_bars"], sparse_day["longest_gap_bars"]) == (3, 3, 2)
+	assert (sparse_day["expected_window_bars"], sparse_day["missing_window_bars"]) == (2, 1)
+	# A trade date inside the contract's life with no bars at all is fully missing.
+	empty_day = coverage.loc[("CLF2026", day2)]
+	assert (empty_day["expected_bars"], empty_day["observed_bars"], empty_day["longest_gap_bars"]) == (2, 0, 2)

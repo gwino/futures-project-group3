@@ -108,11 +108,20 @@ The steps are described in full in `reports/methodology.md`.
 | `processed/cl_session_daily_continuous.parquet` | same | One row per trade date for the held contract (443 trade dates); the daily horizon for the common window. |
 | `processed/cl_intraday_roll_calendar.csv` | same | One row per roll (21 rolls), with the session-close gap (`gap`) and the 15-minute gap (`intraday_gap`). |
 | `processed/cl_intraday_window_coverage.csv` | same | Number of held-contract bars inside the trading window on each trade date. |
+| `processed/cl_intraday_session_coverage.csv` | same | One row per contract and trade date: expected, observed, and missing bars, the longest run of missing bars, the same counts for the trading window, and whether the contract is held. |
+| `processed/cl_intraday_contract_coverage.csv` | same | The session coverage totalled per contract, overall and for the sessions in which the contract is held. |
 | `processed/cl_intraday_quality_summary.csv` | same | Data-quality checks and their results. |
 | `processed/cl_intraday_prepare.manifest.json` | same | Settings plus SHA256 of the input and every output. |
 | `../reports/figures/intraday_roll_examples.png` | same | Raw and back-adjusted prices around three rolls. |
 
-Settings are in `config/prepare_intraday.yaml`. The contract pattern, holiday calendar, roll rule, and degraded dates are read from `config/prepare_daily.yaml`, so both horizons use the same trade dates and roll on the same sessions. Run `src/prepare_daily_data.py` first to enable the roll cross-check against `cl_daily_roll_calendar.csv`.
+Settings are in `config/prepare_intraday.yaml`. The contract pattern, holiday calendar, roll rule, and degraded dates are read from `config/prepare_daily.yaml`, so both horizons use the same trade dates and roll on the same sessions.
+
+Run the daily step first: it writes `cl_daily_roll_calendar.csv`, which the intraday step uses to cross-check its roll dates (the check is reported as skipped if the file is missing). Neither step needs an API key.
+
+```bash
+python -m src.prepare_daily_data --config config/prepare_daily.yaml
+python -m src.prepare_intraday_data --config config/prepare_intraday.yaml
+```
 
 ### Session and bar rules (#4)
 
@@ -143,6 +152,7 @@ The full exploration, including liquidity and volatility by time of day, autocor
 
 - **Quality.** No missing values, duplicates, OHLC inconsistencies, zero-volume bars, or non-positive prices. Every trade date in the window has outright data. 4,614 bars fall on Databento degraded dates and are flagged.
 - **Window coverage.** 442 of 443 trade dates have all 22 window bars. The exception is 2025-12-24 (early close, 19 bars), so its cutoff bar is at 12:45 CT.
+- **Missing bars per contract and session.** A bar is expected whenever any outright contract traded in it on that trade date, so early closes and holiday sessions are handled without a separate calendar (a normal session has 92 bars). The held contract has no missing bars in any of its 443 sessions. Deferred months trade sparsely: across all 71 contracts, 456,260 of 1,700,563 expected bars are observed. See `cl_intraday_session_coverage.csv` and `cl_intraday_contract_coverage.csv`.
 - **Liquidity.** The window holds 53.4% of the held contract's volume, so most trading happens in the hours where the intraday strategy can trade.
 - **Outliers.** 125 held-contract bars are flagged, and all of them are matched by a same-direction move in the next listed month at the same time, so they are market moves rather than bad prints. The most common bar is 17:15 CT (30 of 125), whose close-to-close change spans the daily halt or the weekend; 70% of the flagged bars fall outside the trading window.
 - **Common-window split.** A 70/30 split of the 443 common trade dates puts the cutoff at 2026-03-27 (last development date) / 2026-03-30 (first holdout date).
