@@ -148,6 +148,8 @@ python -m src.prepare_intraday_data --config config/prepare_intraday.yaml
 
 ### Intraday findings for strategy design
 
+The full exploration, including liquidity and volatility by time of day, autocorrelation, and trading costs, is in `analysis/02.5_intraday_data_exploration.ipynb`.
+
 - **Quality.** No missing values, duplicates, OHLC inconsistencies, zero-volume bars, or non-positive prices. Every trade date in the window has outright data. 4,614 bars fall on Databento degraded dates and are flagged.
 - **Window coverage.** 442 of 443 trade dates have all 22 window bars. The exception is 2025-12-24 (early close, 19 bars), so its cutoff bar is at 12:45 CT.
 - **Missing bars per contract and session.** A bar is expected whenever any outright contract traded in it on that trade date, so early closes and holiday sessions are handled without a separate calendar (a normal session has 92 bars). The held contract has no missing bars in any of its 443 sessions. Deferred months trade sparsely: across all 71 contracts, 456,260 of 1,700,563 expected bars are observed. See `cl_intraday_session_coverage.csv` and `cl_intraday_contract_coverage.csv`.

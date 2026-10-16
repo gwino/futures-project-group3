@@ -27,3 +27,29 @@ The last trade date of each contract follows the CME rule: three business days b
 On each roll we measure the gap between the new contract's close and the old contract's close on the last session before the roll where both traded. Signal prices (`signal_*`) are additively back-adjusted: every earlier price is shifted by the sum of all later gaps, so the adjusted series has no jumps at rolls and its latest prices equal the raw prices. Additive adjustment preserves price differences in USD per barrel, which is what moving-average crossovers use and what one contract earns. Ratio adjustment would not work with the negative prices of April 2020. Because the cumulative adjustment reaches −50 USD/bbl, adjusted prices can be negative and must not be used for percentage returns.
 
 Tradable prices are the raw prices of the contract actually held. P&L and returns are measured within one contract. On a roll date, the old position is closed and the new one opened at that session's prices: the roll calendar records both contracts' opens on the roll date.
+
+## Intraday horizon
+
+This section covers the intraday data used for the 15-minute strategy and for the common-window daily comparison. The full rules are in `data/README.md` (*Intraday data*), and the exploration is in `analysis/02.5_intraday_data_exploration.ipynb`.
+
+### Data and sessions
+
+We use 1-minute OHLCV bars for the same outright CL contracts from Databento's `GLBX.MDP3` dataset (`ohlcv-1m`, parent `CL.FUT`), covering 2 January 2025 to 7 October 2026 (443 trade dates). Each minute is assigned to the CME trade date whose session it belongs to: a session runs from 17:00 CT on the prior day to 16:00 CT, and holiday sessions fold into the next trade date, as in the daily data. Two one-lot trades stamped during the 16:00 to 17:00 CT halt, and the partial evening session of 8 October 2026, are dropped.
+
+### 15-minute bars and the trading window
+
+Databento stamps each 1-minute bar at the start of its minute, so 15-minute bars are left-closed and labeled by their end time: the bar stamped 08:15 covers 08:00:00 to 08:14:59. Bars are cut on the UTC clock, so the repeated hour at the end of daylight saving time is never merged, and empty bars are dropped rather than forward-filled. Signals use the full session, but positions may be held only from 08:00 to 13:30 CT on the trade date (22 bars), and all positions are closed at the close of the last bar in that window (13:30 CT, or earlier on early-close days such as 24 December 2025).
+
+### Rolls and prices
+
+The intraday series rolls on the same trade dates as the daily series (3 trade dates before the last trade date; all 21 rolls in the sample match). The held contract changes at the 17:00 CT open of the roll date, so both horizons hold the same contract on every trade date. Signal prices are additively back-adjusted using the price gap at the last 15-minute bar before the roll session where both contracts traded; for every roll this equals the gap between session closes. Because intraday positions are flat at every session end, the intraday strategy never trades a roll.
+
+### Common-window daily bars
+
+For the daily-versus-intraday comparison, daily bars are rebuilt from the same 1-minute data on CME sessions, so their close is the last trade before 16:00 CT. These session bars hold the same contract as the UTC-day bars on every date, but their daily changes have a correlation of only 0.88 with the UTC-day series, because a UTC-day bar closes at midnight UTC and includes the start of the next session. Using session bars for both horizons removes that mismatch from the comparison.
+
+### Limitations
+
+- **Short sample.** The common window covers about 21 months, so a 70/30 split leaves a holdout of about six months (from 30 March 2026). Results over this window are sensitive to the 2026 volatility regime.
+- **No settlement prices.** The intraday close at the cutoff bar is a traded price, not the official settlement price, although both fall in the 13:28 to 13:30 CT settlement window.
+- **Costs dominate the intraday horizon.** With the cost settings in #4, the intraday parameter grid implies roughly 10% to 13% of capital per year in trading costs, compared with about 0.4% for the daily grid, so the intraday results depend heavily on the cost assumptions.
