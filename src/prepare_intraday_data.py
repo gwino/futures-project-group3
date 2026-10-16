@@ -1,6 +1,10 @@
 """Validate raw Databento 1-minute CL bars and build 15-minute and CME session bars.
 
-Run from the repository root: python -m src.prepare_intraday_data
+Run from the repository root, after the daily preparation step (which writes the daily roll
+calendar used to cross-check the intraday rolls):
+
+    python -m src.prepare_daily_data --config config/prepare_daily.yaml
+    python -m src.prepare_intraday_data --config config/prepare_intraday.yaml
 
 Outputs (in the configured output directory):
 - cl_intraday_15m_contracts.parquet: validated 15-minute bars for every outright contract.
@@ -9,6 +13,8 @@ Outputs (in the configured output directory):
 - cl_session_daily_contracts.parquet and cl_session_daily_continuous.parquet: CME session bars
   (17:00 to 16:00 CT) built from the same 1-minute data, for the common-window daily horizon.
 - cl_intraday_roll_calendar.csv: one row per roll, with session and 15-minute price gaps.
+- cl_intraday_session_coverage.csv: expected, observed, and missing bars (and the longest gap) for
+  every contract on every trade date; cl_intraday_contract_coverage.csv: the same, totalled per contract.
 - cl_intraday_window_coverage.csv and cl_intraday_quality_summary.csv: data-quality reports.
 - cl_intraday_prepare.manifest.json: inputs, settings, and output hashes.
 """
@@ -186,6 +192,73 @@ def flag_outliers(bars: pd.DataFrame, window: int, threshold: float) -> pd.Serie
 	)
 	flags = change.abs().gt(threshold * scale) & scale.gt(0)
 	return flags.reindex(bars.index).fillna(False)
+
+
+def session_coverage(bars: pd.DataFrame, contracts: pd.DataFrame) -> pd.DataFrame:
+	"""Expected, observed, and missing bars for every contract on every trade date of its life in the data.
+
+	A bar is expected when any outright contract traded in it on that trade date, so early closes and
+	holiday sessions need no separate calendar. A contract's life runs from its first to its last trade
+	date in the data; trade dates in that range with no bars at all count as fully missing.
+	"""
+	market = bars[["trade_date", "bar_end", "in_trade_window"]].drop_duplicates(["trade_date", "bar_end"])
+	life = contracts[["instrument_id", "contract_id", "first_date", "last_date"]]
+	grid = market.merge(life, how="cross")
+	grid = grid[grid["trade_date"].between(grid["first_date"], grid["last_date"])]
+	observed = bars[["instrument_id", "bar_end"]].assign(observed=True)
+	grid = grid.merge(observed, on=["instrument_id", "bar_end"], how="left")
+	grid["observed"] = grid["observed"].notna()
+	grid = grid.sort_values(["instrument_id", "bar_end"]).reset_index(drop=True)
+
+	key = ["instrument_id", "trade_date"]
+	# Longest run of consecutive missing bars within each contract-session.
+	run = grid.groupby(key)["observed"].cumsum()
+	missing = grid[~grid["observed"]]
+	longest = missing.groupby([*key, run[missing.index]]).size().groupby(level=[0, 1]).max().rename("longest_gap_bars")
+
+	grid["window_observed"] = grid["observed"] & grid["in_trade_window"]
+	coverage = grid.groupby(key).agg(
+		contract_id=("contract_id", "first"),
+		expected_bars=("bar_end", "size"),
+		observed_bars=("observed", "sum"),
+		expected_window_bars=("in_trade_window", "sum"),
+		observed_window_bars=("window_observed", "sum"),
+	)
+	coverage = coverage.join(longest).fillna({"longest_gap_bars": 0}).reset_index()
+	coverage["missing_bars"] = coverage["expected_bars"] - coverage["observed_bars"]
+	coverage["missing_window_bars"] = coverage["expected_window_bars"] - coverage["observed_window_bars"]
+	columns = [
+		"contract_id", "instrument_id", "trade_date", "expected_bars", "observed_bars", "missing_bars", "longest_gap_bars",
+		"expected_window_bars", "observed_window_bars", "missing_window_bars",
+	]
+	return coverage[columns].astype({"longest_gap_bars": int})
+
+
+def contract_coverage(coverage: pd.DataFrame) -> pd.DataFrame:
+	"""Per-contract totals of the session coverage report, overall and for the sessions in which the contract is held."""
+	held = coverage[coverage["held"]]
+	totals = coverage.groupby("contract_id").agg(
+		instrument_id=("instrument_id", "first"),
+		first_date=("trade_date", "min"),
+		last_date=("trade_date", "max"),
+		sessions=("trade_date", "size"),
+		sessions_without_bars=("observed_bars", lambda observed: int(observed.eq(0).sum())),
+		expected_bars=("expected_bars", "sum"),
+		observed_bars=("observed_bars", "sum"),
+		missing_bars=("missing_bars", "sum"),
+		longest_gap_bars=("longest_gap_bars", "max"),
+	)
+	totals["missing_share"] = totals["missing_bars"] / totals["expected_bars"]
+	held_totals = held.groupby("contract_id").agg(
+		held_sessions=("trade_date", "size"),
+		held_missing_bars=("missing_bars", "sum"),
+		held_missing_window_bars=("missing_window_bars", "sum"),
+		held_longest_gap_bars=("longest_gap_bars", "max"),
+	)
+	totals = totals.join(held_totals).fillna({"held_sessions": 0, "held_missing_bars": 0, "held_missing_window_bars": 0, "held_longest_gap_bars": 0})
+	held_columns = ["held_sessions", "held_missing_bars", "held_missing_window_bars", "held_longest_gap_bars"]
+	totals[held_columns] = totals[held_columns].astype(int)
+	return totals.sort_values(["last_date", "contract_id"]).reset_index()
 
 
 # --- Rolls and continuous series --------------------------------------------------------------
@@ -405,6 +478,12 @@ def main() -> int:
 			f"{len(matched)}/{len(rolls)}",
 			f"{len(overlap)} daily rolls in the same period",
 		)
+	else:
+		report(
+			"rolls_match_daily_roll_calendar",
+			"skipped",
+			f"{daily_roll_path} not found; run python -m src.prepare_daily_data --config config/prepare_daily.yaml first",
+		)
 
 	# Continuous series for both horizons.
 	session_continuous = build_continuous(
@@ -441,7 +520,31 @@ def main() -> int:
 		f"{window_bars} bars from {session_cfg['trade_window_start']} to {session_cfg['trade_window_end']} CT; short: "
 		+ ", ".join(f"{row.trade_date.date()} ({row.window_bars})" for row in short.itertuples()),
 	)
-	report("missing_window_bars", int((window_bars - coverage["window_bars"]).sum()))
+	report("missing_window_bars", int((window_bars - coverage["window_bars"]).sum()), f"against a fixed {window_bars}-bar window")
+
+	# Missing bars and gaps per contract and per session.
+	held_by_date = continuous.drop_duplicates("trade_date").set_index("trade_date")["instrument_id"]
+	bar_coverage = session_coverage(bars, contracts)
+	bar_coverage["held"] = bar_coverage["instrument_id"].eq(bar_coverage["trade_date"].map(held_by_date))
+	per_contract = contract_coverage(bar_coverage)
+	held_coverage = bar_coverage[bar_coverage["held"]]
+	report(
+		"contract_session_bars_observed",
+		f"{int(bar_coverage['observed_bars'].sum())}/{int(bar_coverage['expected_bars'].sum())}",
+		f"all {len(per_contract)} contracts over {len(bar_coverage)} contract-sessions; deferred months trade sparsely, "
+		"see cl_intraday_session_coverage.csv and cl_intraday_contract_coverage.csv",
+	)
+	report(
+		"held_contract_missing_bars",
+		int(held_coverage["missing_bars"].sum()),
+		f"of {int(held_coverage['expected_bars'].sum())} expected bars in {len(held_coverage)} held sessions; "
+		f"longest gap {int(held_coverage['longest_gap_bars'].max())} bars",
+	)
+	report(
+		"held_contract_missing_window_bars",
+		int(held_coverage["missing_window_bars"].sum()),
+		f"of {int(held_coverage['expected_window_bars'].sum())} window bars in which the market traded",
+	)
 	report(
 		"window_share_of_held_volume",
 		f"{continuous.loc[continuous['in_trade_window'], 'volume'].sum() / continuous['volume'].sum():.1%}",
@@ -501,6 +604,8 @@ def main() -> int:
 		"session_continuous": output_dir / "cl_session_daily_continuous.parquet",
 		"roll_calendar": output_dir / "cl_intraday_roll_calendar.csv",
 		"window_coverage": output_dir / "cl_intraday_window_coverage.csv",
+		"session_coverage": output_dir / "cl_intraday_session_coverage.csv",
+		"contract_coverage": output_dir / "cl_intraday_contract_coverage.csv",
 		"quality_summary": output_dir / "cl_intraday_quality_summary.csv",
 	}
 	bars.sort_values(["contract_month", "bar_end"])[bar_columns].to_parquet(outputs["contracts_15m"], index=False)
@@ -509,6 +614,8 @@ def main() -> int:
 	session_continuous[session_continuous_columns].to_parquet(outputs["session_continuous"], index=False)
 	rolls.to_csv(outputs["roll_calendar"], index=False)
 	coverage.to_csv(outputs["window_coverage"], index=False)
+	bar_coverage.sort_values(["trade_date", "contract_id"]).to_csv(outputs["session_coverage"], index=False)
+	per_contract.to_csv(outputs["contract_coverage"], index=False)
 	summary_frame = pd.DataFrame(summary)
 	summary_frame.to_csv(outputs["quality_summary"], index=False)
 
