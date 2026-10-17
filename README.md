@@ -1,162 +1,126 @@
-# Energy Futures Strategy Analysis
+# WTI Crude Oil Intraday Momentum: Replication and New Hypotheses
 
-Group 3 project for FINM 37000: Futures and Related Derivatives.
+Group 3 research project for FINM 37000: Futures and Related Derivatives.
 
-## Team Members and Planning Roles
+> **Current scope (revised):** This project focuses **only** on replicating Baltussen, Da, Lammers & Martens (2021), *Hedging Demand and Market Intraday Momentum*, for post-2020 NYMEX WTI crude oil futures (CL), and testing new hypotheses about overnight versus daytime returns and volatility. The previous **moving-average strategy** and **daily-versus-15-minute strategy comparison** have been discontinued.
 
-| Team member | Role | Initial responsibility |
+## Research questions
+
+**Replication.** Does the paper's intraday momentum relationship hold for CL during **2021–2026**? Specifically, does the return from the previous session's reference close until 30 minutes before today's close predict the final half-hour return?
+
+**New hypotheses.**
+1. Do **overnight** and **daytime** returns differ in their ability to predict the final 30-minute CL return?
+2. Does that predictive relationship change during **high-volatility periods** (measured using only information known by the prediction time)?
+3. Does **agreement versus disagreement** between overnight and daytime return directions affect closing-period momentum?
+
+A statistically significant coefficient is not sufficient evidence of a useful trading strategy. We will examine out-of-sample performance and the sensitivity of any directional backtest to execution costs.
+
+### Why CL?
+
+CL is one of the energy futures in the original paper. Its individual historical rest-of-day results were **not statistically significant** (Appendix Table B3: t-statistic 0.25; adjusted R² 0.03%; out-of-sample R² −1.04%). We will examine whether this remains true in the period after 2020.
+
+**Reference:** Baltussen, G., Da, Z., Lammers, S., and Martens, M. (2021), *Hedging Demand and Market Intraday Momentum*, Journal of Financial Economics, 142, 377–403.
+
+## Data available and required
+
+| Dataset | Current coverage | Intended use |
 | --- | --- | --- |
-| Gabriella Wiem | Tech Leader | Maintain the repository, set up the Python environment and data acquisition workflow, and coordinate backtesting implementation and merges. |
-| Jiayi Chen | Communication Leader | Maintain the README, document the methodology, organize performance comparisons, and coordinate the final report and presentation. |
-| Ethan Huang | Design Leader | Define the analysis workflow and data-cleaning and rollover rules, and review strategy assumptions and backtest validation. |
+| CL daily history | **2010–2026** | Existing resource for contract/volume metadata, roll cross-checks, and broader context; **not** a daily-strategy comparison |
+| CL intraday history | **2025–2026** | Audit actual frequency, trading-hour coverage, bar timestamps, contract IDs, and quality before reuse |
+| Missing minute history | **Primarily 2021–2024** | Procure as needed, after assessing price and existing gaps |
+| Target analysis | **2021–2026** | One-minute CL OHLCV, ideally across the entire available electronic trading session |
 
-These responsibilities are proposed for team review. All members will contribute to implementation, review one another's work, and present their contributions in Week 4. Changes to scope or responsibilities will be reflected in this README.
+A full electronic-session minute history allows the project to calculate **overnight realized volatility** as well as daytime realized volatility. To compute overnight *returns* alone, only the prior close and current opening reference prices are necessary. Level 2 order-book data is **not required**.
 
-## Desired Project Outcome
+**Data handling:** retain individual CL contract identifiers, exchange session calendars, historical volume, and contract expiration/roll information. Preserve original market-data files locally, record source provenance, and do not commit API keys or restricted raw data.
 
-**Research question:** How does trading frequency affect the performance of a trend-following strategy in energy futures after transaction costs, and how does that performance compare with a passive futures benchmark?
+## Paper-consistent session and return definitions
 
-We will build a reproducible Python analysis using historical data from Databento. The proposed initial market is WTI crude oil futures. We will compare a moving-average trend-following strategy at intraday and daily horizons to investigate how trading frequency, holding periods, costs, and market conditions affect performance.
+Use **America/Chicago** (Central Time, with daylight saving changes handled automatically). The paper selects **09:00–14:30 Eastern = 08:00–13:30 Central** as the CL reference trading window, although CL's electronic trading runs for much longer.
 
-The strategy will take a long position when a fast moving average exceeds a slow moving average and a short position when it falls below it. Signals will use only information available at the time, with execution at the next eligible price. The intraday version will close positions before the defined session ends; the daily version may hold positions across sessions.
-
-The final deliverables will include:
-
-- A documented dataset and reproducible cleaning pipeline, including contract selection, missing-data handling, and rollover rules.
-- Configurable strategy and backtesting code for both trading horizons.
-- Comparison tables covering gross and net returns, volatility, Sharpe ratio, maximum drawdown, turnover, and trading costs, with calculation conventions stated.
-- Cumulative-performance and drawdown charts, plus a limited parameter and cost sensitivity analysis.
-- A final report explaining the research question, data, methodology, findings, and limitations.
-- A Week 4 presentation summarizing the analysis and each team member's contribution.
-
-We will compare both strategies with a long-only position in the same rolling futures contracts, using a common starting-capital basis and consistent rollover and cost assumptions. The report will explain differences in overnight exposure and holding periods so the comparison can be interpreted fairly.
-
-Success means that another team member can obtain the documented inputs, reproduce the backtests and key tables, and trace the report's conclusions to saved results. A profitable strategy is not required: evidence of weak or cost-sensitive performance is also a useful research outcome.
-
-### Scope and Decisions to Confirm
-
-This README describes a proposed implementation. By the end of Week 1, the team will confirm the following settings and record them in the configuration files and data documentation:
-
-- **Data:** Databento dataset, individual contract identifiers, exact sample dates, access requirements, and download budget. Both horizons should use a common historical period where coverage permits.
-- **Trading horizons:** Proposed 15-minute intraday bars and daily bars. Define the session timezone and closing cutoff, and document whether bars are supplied directly or aggregated from finer data.
-- **Strategy:** Fast and slow moving-average windows, one-contract position sizing as the proposed baseline, and execution at the next eligible bar's opening price. Define how intraday positions are closed at the session cutoff.
-- **Contract handling:** A reproducible roll rule that retains individual contract identifiers and distinguishes signal prices from the tradable prices used to calculate P&L.
-- **Evaluation:** Proposed chronological split of the first 70% of sessions for development and the final 30% for holdout evaluation, with a shared date cutoff. Parameters will be selected on development data and frozen before holdout evaluation.
-- **Accounting:** Starting capital, contract multiplier, commissions per side, slippage, roll costs, and conventions for returns, annualization, and Sharpe ratio calculations.
-
-The project will focus on one energy market and one baseline strategy. If data access limits the intraday study, the team will agree on a feasible alternative in Week 1 and update this README. Additional contracts or strategies are optional extensions after the core analysis is complete. The project will analyze historical data without executing live trades.
-
-## Proposed System Design
-
-The repository is currently at the planning stage. The following structure defines where the data, reusable code, analysis, and final deliverables will be stored; the listed implementation files are planned.
-
-```text
-futures-project-group3/
-├── README.md                  # Project goal, setup, workflow, and timeline
-├── requirements.txt           # Pinned Python dependencies
-├── .env.example               # Environment variable names; no real credentials
-├── .gitignore                 # Exclude credentials, local environments, and data
-├── config/
-│   ├── intraday.yaml           # Data, session, strategy, and cost settings
-│   └── daily.yaml              # Daily strategy and backtest settings
-├── data/
-│   ├── raw/                   # Original Databento files, preserved unchanged
-│   ├── processed/             # Cleaned bars and contract/roll metadata
-│   └── README.md              # Provenance, schema, coverage, and access instructions
-├── src/
-│   ├── __init__.py
-│   ├── download_data.py        # Fetch configured historical data
-│   ├── prepare_data.py         # Validate, clean, and construct analysis datasets
-│   ├── strategies.py           # Generate signals using past observations only
-│   ├── backtest.py             # Positions, fills, contract rolls, and net P&L
-│   └── evaluate.py             # Metrics, comparisons, and charts
-├── analysis/
-│   ├── 01_data_exploration.ipynb
-│   └── 02_strategy_comparison.ipynb
-├── tests/                     # Checks for timing, P&L, costs, and rollover behavior
-└── reports/
-    ├── figures/               # Performance and drawdown charts
-    ├── tables/                # Metrics and sensitivity results
-    ├── runs/                  # Per-run settings, trades, positions, and returns
-    ├── final_report.md        # Findings and limitations
-    └── presentation.pdf       # Final slides for Week 4
-```
-
-The workflow will be **Databento → raw data → validated data → strategy signals → backtest → evaluation → report and presentation**. Reusable logic will live in `src/`; notebooks in `analysis/` will explain and visualize the results. Configuration files will record the assumptions for each run so a teammate can reproduce it without editing source code.
-
-Processed data will preserve timestamps, contract identifiers, price and volume fields, and roll markers. Each backtest will save its configuration and data reference together with timestamped trades, positions, gross P&L, costs, and net P&L. Both horizons will share the same accounting and evaluation code to keep the comparison consistent.
-
-Raw and processed market data will stay local unless redistribution is permitted. Credentials must never be committed. The data README will explain how authorized users can obtain the same inputs, including dataset identifiers, dates, timezone, units, and any limitations.
-
-## How to Run the Project
-
-**Planned interface:** the scripts, configuration files, and dependency file below are not implemented yet. These instructions define the workflow we intend to deliver and will be verified before final submission.
-
-### 1. Set Up the Environment
-
-Use Python 3.11 as the proposed baseline. Clone the repository and create a virtual environment:
-
-```bash
-git clone https://github.com/gwino/futures-project-group3.git
-cd futures-project-group3
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-```
-
-On Windows, activate with `.venv\Scripts\activate` instead. The dependency file will record tested versions of the Databento client, data analysis and plotting libraries, notebook support, configuration parsing, and testing tools.
-
-### 2. Obtain and Prepare Data
-
-Set your own Databento API key in the shell environment:
-
-```bash
-export DATABENTO_API_KEY="YOUR_API_KEY"
-```
-
-Review the selected contracts, dates, resolution, and estimated data cost before downloading. The planned `data/README.md` will document the required inputs, file format, and access instructions. If those inputs are already available in `data/raw/`, skip downloading and start with preparation.
-
-```bash
-python -m src.download_data --config config/intraday.yaml
-python -m src.download_data --config config/daily.yaml
-python -m src.prepare_data --config config/intraday.yaml
-python -m src.prepare_data --config config/daily.yaml
-```
-
-Data preparation will check timestamps, duplicates, missing observations, and contract coverage. It will apply the documented session and rollover rules, preserve roll metadata, and distinguish signal prices from tradable contract prices used for P&L.
-
-### 3. Run the Analysis
-
-```bash
-python -m src.backtest --config config/intraday.yaml
-python -m src.backtest --config config/daily.yaml
-python -m src.evaluate --configs config/intraday.yaml config/daily.yaml
-python -m pytest
-jupyter lab analysis/
-```
-
-Each backtest will save its settings and outputs in a separate directory under `reports/runs/`. Evaluation will produce comparison tables in `reports/tables/` and cumulative-performance and drawdown charts in `reports/figures/`. The notebooks will read these outputs and support the narrative in `reports/final_report.md`.
-
-Validation will check signal timing, representative long and short trades, session exits, contract rolls, and cost accounting against simple hand-calculated examples. Before submission, another team member will follow these instructions in a clean environment, verify the key tables, and document any fixes. The final README will identify the tested environment and expected output filenames.
-
-## Project Timeline
-
-The project runs for four weeks, with Week 4 reserved for the presentation and final deliverables. Calendar dates will be added once the course schedule is confirmed. Core implementation and analysis should be complete by the end of Week 3 so the final week can focus on reproduction, communication, and submission.
-
-| Week | Work plan | Deliverable / completion criteria |
+| Variable | Time range in Central Time | Meaning |
 | --- | --- | --- |
-| 1 — Agree on scope and establish data | All members review the research question and assumptions. Gabriella sets up the environment and obtains the data; Ethan defines processing and roll rules; Jiayi finalizes the plan and documentation. | Team agreement recorded on the README PR; environment installs successfully; exact sample, data coverage, strategy settings, session rules, and evaluation split are documented. |
-| 2 — Prepare data and implement the baseline | Ethan develops and reviews data preparation; Gabriella implements signals and backtesting; Jiayi builds the exploration notebook and documents methodology. Add costs and the passive benchmark. | Both horizons run end to end on validated data; sample trades reconcile with hand calculations; timing, session exits, costs, and roll behavior are checked. |
-| 3 — Evaluate and draft findings | Jiayi coordinates comparison tables and charts. Gabriella and Ethan verify accounting and sensitivity results. Select and freeze parameters using development data, evaluate the holdout, and draft the report and presentation outline. | Core analysis complete; development and holdout results reported separately; metrics and charts saved; draft report explains assumptions, findings, and limitations. |
-| 4 — Present and deliver | Gabriella reproduces the documented workflow; all members resolve final problems, review the report and slides, rehearse their speaking sections, and present and submit the project. | Final report and presentation delivered; run instructions verified; numerical claims trace to saved outputs; each member's contributions and reviews are visible in the repository. |
+| ON | Previous reference close **13:30** → today's **08:00** | Overnight return |
+| FH | **08:00–08:30** | First half-hour return |
+| ONFH | Previous reference close **13:30** → today's **08:30** | Paper's opening-period predictor (includes overnight) |
+| M | **08:30–12:30** | Middle-of-day return |
+| SLH | **12:30–13:00** | Second-to-last half-hour return |
+| ROD | Previous reference close **13:30** → today's **13:00** | Paper's rest-of-day predictor (includes overnight) |
+| DAY | **08:00–13:00** | New daytime-only predictor |
+| LH | **13:00–13:30** | Prediction target: final half-hour return |
 
-To keep the schedule feasible, sensitivity checks will use a small predefined set of parameter and cost settings. Data-access problems and scope changes should be resolved in Week 1 and reflected in this README. Each member will review the README PR and record agreement or specific feedback; the team will confirm a shared communication channel and check progress weekly.
+The paper's main regressions use **simple returns**. We will retain those for direct replication, and may use clearly labeled log-return versions for an exactly additive ON + DAY decomposition. Reference prices at 13:30 CT must not be confused with the **16:00 CT end of the electronic session**.
 
-## Task Tracking
+### Replication: primary models
 
-Tasks are tracked as [GitHub Issues](https://github.com/gwino/futures-project-group3/issues) and grouped into [milestones](https://github.com/gwino/futures-project-group3/milestones). Each issue lists a proposed owner, reviewer, dependencies, and "Done when" criteria. Comment on an issue to claim or swap it, and reference the issue in related PRs (for example, `Closes #5`).
+1. `LH ~ ONFH`
+2. `LH ~ ONFH + M + SLH`
+3. `LH ~ ROD`
 
-- **Week 1 – Scope & Data:** [#2 Team agreement](https://github.com/gwino/futures-project-group3/issues/2), [#3 Environment setup](https://github.com/gwino/futures-project-group3/issues/3), [#4 Scope decisions](https://github.com/gwino/futures-project-group3/issues/4), [#5 Data download](https://github.com/gwino/futures-project-group3/issues/5)
-- **Week 2 – Data Exploration & Planning:** [#6 Data cleaning](https://github.com/gwino/futures-project-group3/issues/6), [#7 Contract rolls](https://github.com/gwino/futures-project-group3/issues/7), [#8 Data exploration](https://github.com/gwino/futures-project-group3/issues/8), [#9 Plan strategy and evaluation tasks](https://github.com/gwino/futures-project-group3/issues/9)
+Report regression coefficients in units matching the paper, intercepts, robust t-statistics, adjusted R², sample sizes, and **expanding-window out-of-sample R²** versus the expanding historical mean. The paper uses a minimum initial estimation window of approximately **500 observations**.
 
-Strategy, backtesting, evaluation, and reporting tasks will be opened from #9 once the team has reviewed the data findings in #8, so the later work is designed around the actual data.
+### New hypotheses: planned tests
+
+- **Return decomposition:** `LH ~ ON`, `LH ~ DAY`, and `LH ~ ON + DAY`; compare incremental predictive power, standardized effects, coefficient equality, and out-of-sample accuracy to the original ROD model.
+- **Volatility regimes:** construct overnight/daytime realized variance from one-minute returns, carefully handling exchange breaks and reopening jumps. Test whether ON and DAY slopes differ in high-volatility regimes using interaction terms, with thresholds determined from training data only.
+- **Direction agreement:** compare the closing return and directional hit rate when overnight and daytime returns agree versus disagree. Evaluate the four sign combinations as well as the pooled agreement/disagreement test.
+
+Features used at the **13:00 CT** trading decision may contain **no information from 13:00–13:30 CT**. Use chronological out-of-sample evaluation; consider data-snooping risk when testing multiple hypotheses.
+
+## Project phases and GitHub issues
+
+**Project tracker:** [#24 — CL intraday momentum replication and new hypotheses](https://github.com/gwino/futures-project-group3/issues/24).
+
+| Phase | GitHub issue | Deliverable |
+| --- | --- | --- |
+| **1. Data procurement & cleaning** | [#25 Audit existing data](https://github.com/gwino/futures-project-group3/issues/25) | Coverage inventory for 2010–2026 daily and 2025–2026 intraday |
+| | [#26 Procure missing one-minute data](https://github.com/gwino/futures-project-group3/issues/26) | Cost-checked 2021–2024 acquisition and source manifests |
+| | [#27 Clean full-session data and handle rolls](https://github.com/gwino/futures-project-group3/issues/27) | Validated minute dataset, roll calendar and quality tests |
+| **2. Replicate the paper** | [#28 Construct return variables](https://github.com/gwino/futures-project-group3/issues/28) | ONFH, M, SLH, ROD, LH and regression-ready data |
+| | [#29 Run post-2020 regressions](https://github.com/gwino/futures-project-group3/issues/29) | Historical-vs-new results and OOS forecasts |
+| | [#30 Backtest closing-period strategy](https://github.com/gwino/futures-project-group3/issues/30) | Trade ledger, transaction-cost sensitivity, and performance metrics |
+| **3. Test new hypotheses** | [#31 Overnight versus daytime](https://github.com/gwino/futures-project-group3/issues/31) | Single- and joint-predictor tests |
+| | [#32 Volatility regime interactions](https://github.com/gwino/futures-project-group3/issues/32) | Pre-close volatility features and interaction models |
+| | [#33 Signal agreement & final report](https://github.com/gwino/futures-project-group3/issues/33) | Agreement/disagreement tests and reproducible final findings |
+
+**Dependency order:** #25 → #26 → #27 → #28 → #29, then #30 and #31–#33 as the validated dataset becomes available. Contract-roll logic and pre-existing download utilities may be reused from earlier work.
+
+The repository also contains **older issues from the discontinued moving-average/daily-versus-15-minute proposal**. They are historical planning items and are **not part of this project's current scope**; they can be triaged/closed separately without discarding reusable code.
+
+## Deliverables
+
+- Documented 2021–2026 CL research dataset and reproducible cleaning/roll procedures, including complete and incomplete session handling.
+- Faithful reproduction of the paper's three core CL regression specifications, with historical reference metrics and out-of-sample evaluation.
+- A closing-half-hour directional backtest with explicit timing, contract sizing, fill assumptions, commissions and slippage.
+- Overnight/daytime return comparison, high-volatility interaction tests, and sign-agreement analysis.
+- Clear figures and tables covering t-statistics, adjusted and OOS R², hit rates, and gross/net performance where applicable.
+- Final report and presentation explaining research questions, data, methods, findings, robustness checks, and limitations.
+
+**Success criterion:** Another team member can reproduce the results from authorized data, documented configurations and runnable code. Null findings (including continued non-significance for CL) are valid research outcomes.
+
+## Team
+
+| Team member | Existing coordination role |
+| --- | --- |
+| Gabriella Wiem | Tech Lead — data acquisition workflow, research code coordination, integration and reproducibility |
+| Jiayi Chen | Communication Lead — research documentation, analysis tables/figures, report and presentation |
+| Ethan Huang | Design Lead — session/roll definitions, data preparation methodology, validation and review |
+
+Specific issue owners and reviewers are to be confirmed by the team for the **revised** scope.
+
+## Repository organization and reproducibility
+
+The existing `config/`, `data/`, `src/`, `analysis/`, `tests/` and `reports/` folders may be reused. New return-feature, regression, volatility and evaluation modules should be kept **separate from prior moving-average code**, and named/configured according to this study rather than the retired strategy.
+
+All sample periods, data filters, contract roll rules, session/reference times, return conventions, regression specifications, OOS rules and trading-cost assumptions must be recorded in configuration files and the final methodology note. Existing `src/download_data.py` and related routines should be inspected before reuse. Commands for new research modules will be documented once implemented and tested.
+
+### Suggested four-week sequence
+
+| Week | Focus |
+| --- | --- |
+| 1 | Audit existing data; confirm vendor coverage, acquisition costs, reference session and contract-selection method |
+| 2 | Complete data acquisition, cleaning and return feature construction; start core regressions |
+| 3 | Finish replication and feasible directional backtest; test overnight/daytime and volatility hypotheses |
+| 4 | Robustness/OOS checks, agreement tests, results review, final report, and presentation |
+
+The research is historical and **does not execute live trades**.
