@@ -1,6 +1,6 @@
 # Data
 
-This folder holds the raw Databento files and the processed datasets used by the analysis. Market data is licensed from Databento, so only files the team has agreed to share are committed. Everything else can be rebuilt with the steps below.
+This folder holds the raw Databento files and the processed datasets used by the analysis. Market data is licensed from Databento, so only files the team has agreed to share are committed. The processed outputs in `processed/` are committed, with parquet files stored through Git LFS (run `git lfs pull` after cloning). Everything else can be rebuilt with the steps below. To build the return variables (#28), start from `reports/minute_dataset_handoff.md`.
 
 ## Provenance
 
@@ -156,3 +156,70 @@ The full exploration, including liquidity and volatility by time of day, autocor
 - **Liquidity.** The window holds 53.4% of the held contract's volume, so most trading happens in the hours where the intraday strategy can trade.
 - **Outliers.** 125 held-contract bars are flagged, and all of them are matched by a same-direction move in the next listed month at the same time, so they are market moves rather than bad prints. The most common bar is 17:15 CT (30 of 125), whose close-to-close change spans the daily halt or the weekend; 70% of the flagged bars fall outside the trading window.
 - **Common-window split.** A 70/30 split of the 443 common trade dates puts the cutoff at 2026-03-27 (last development date) / 2026-03-30 (first holdout date).
+
+## 1-minute research dataset, 2021–2026 (#25–#27)
+
+This is the dataset for the Baltussen, Da, Lammers & Martens (2021) replication. It joins two contiguous `ohlcv-1m` downloads, keeps the full electronic session, and records, for every trade date, the held contract's prices at the paper's reference times. The 15-minute outputs above are unchanged.
+
+### Inventory and provenance (#25, #26)
+
+| File | Query (`GLBX.MDP3`, `ohlcv-1m`, parent `CL.FUT`) | Rows | Created by |
+|---|---|---|---|
+| `raw/crude_oil_2021_2024_1m.dbn` | 2020-12-01 to 2025-01-01 (end exclusive) | 26,343,989 (7,501,614 outright) | `src/download_data.py --config config/intraday_2021_2024.yaml --confirm` |
+| `raw/crude_oil_conflict_1m.dbn` | 2025-01-01 to 2026-10-08 (end exclusive) | 15,196,660 (3,641,915 outright) | `src/download_data.py --config config/intraday.yaml --confirm` |
+
+- Each raw file has a `.manifest.json` next to it with the query, download time, and SHA256. Databento reported an estimated cost of $0.00. Raw `.dbn` files are licensed market data and are not committed.
+- The 2021–2024 file starts in December 2020 so that the first 2021 session has a previous 13:30 close and a roll before it. The two query ranges meet exactly at 2025-01-01 00:00 UTC; the pipeline checks this and found no duplicate minutes.
+- **Frequency and session.** Both files are true 1-minute bars covering the full Globex session (17:00 to 16:00 CT), including overnight. There are no bars in the 16:00–17:00 CT halt, apart from 3 one-lot prints, which are dropped.
+- **Timestamps.** `ts_event` is UTC and marks the **start** of the minute. A bar stamped 13:29 CT holds trades from 13:29:00 to 13:29:59, so its close is the last trade before 13:30.
+- **Coverage.** 1,469 trade dates from 2020-12-02 to 2026-10-07, with no trade date missing; 1,448 of them are from 2021-01-04 on. 121 outright contracts; all 51 that expired in the sample last traded on their computed last trade date. The partial sessions at the start and end of the query range (2020-12-01 and 2026-10-08) are dropped.
+- **Quality.** No missing values, duplicates, OHLC inconsistencies, zero or negative volume, or non-positive prices. 13 held sessions fall on Databento degraded dates; they are flagged, not removed.
+- **Monthly inventory.** `reports/tables/cl_intraday_coverage.csv` has one row per month. Columns: source file, held contracts, rolls, sessions with complete reference prices, paper-sample sessions, early closes, overnight and window coverage, longest gaps, and volume. Every one of the 71 months has an overnight and a daytime minute path on every trade date, so realized overnight volatility can be computed for the whole sample.
+
+### Sessions, reference prices and missing-point rules (#27)
+
+Settings are in `config/prepare_minute.yaml`. Contract pattern, holiday calendar, and degraded dates come from `config/prepare_daily.yaml`.
+
+```bash
+python -m src.prepare_daily_data --config config/prepare_daily.yaml    # optional: roll cross-check
+python -m src.prepare_minute_data --config config/prepare_minute.yaml
+python -m pytest                                                        # 16 tests
+```
+
+1. **Trade dates.** Timestamps are converted from UTC to America/Chicago, so daylight saving is handled by the time zone. Each minute is assigned to the CME trade date whose session it belongs to (17:00 CT on the previous trade date to 16:00 CT). Sunday-evening and holiday sessions fold into the next trade date, using the same rule as the 15-minute pipeline.
+2. **Reference times** follow the paper's CL window, 08:00–13:30 CT:
+   - previous trade date: 13:30 (`p_prev_1330`)
+   - trade date: 08:00, 08:30, 12:30, 13:00, 13:30 (`p_0800` … `p_1330`)
+
+   13:30 is the reference close, not the 16:00 CT end of the electronic session.
+3. **Price at time T.** The close of the held contract's last 1-minute bar that starts before T. Only trades before T are used, so `p_1300` contains nothing from 13:00–13:30 CT. If the minute just before T had no trade, a bar up to 5 minutes older is used, and `stale_*` records how many minutes older it is. Beyond that the price is missing. Prices are never forward-filled further. In the sample no reference price needed a stale bar.
+4. **Missing points.** 13 trade dates are incomplete (`complete = False`), all because of holidays:
+   - 6 early closes at 12:45 CT have no 13:00 or 13:30 price.
+   - The 6 trade dates after them, plus 2020-12-02 (the first date in the sample), have no previous 13:30 price.
+5. **Paper sample filters** (Section 2 of the paper). Non-positive prices are removed (there were none). Early-close days (8, detected when the market stops 30+ minutes before 16:00 CT) and sessions under 100 contracts (none) are flagged. `paper_sample` is true for complete, full-length sessions with enough volume: 1,454 of 1,469 trade dates, or 1,436 from 2021-01-04 on.
+
+### Rolls (#27)
+
+- **Paper rule (used here).** Hold the most liquid contract. Roll at the 17:00 CT open after the first session in which the next contract's session volume exceeds the held contract's. That session's volume is known at its 16:00 close, so there is no look-ahead. A backstop of 1 trade date before expiry was never needed.
+- **Result.** The first crossover came 2 sessions before expiry in 59 of 70 rolls and 3 sessions before in 11. The paper rule therefore rolls 1–2 sessions later than the existing 3-sessions-before-expiry rule (#17/#18).
+- **Comparison.** `cl_minute_roll_comparison.csv` lists both calendars side by side. Under the existing rule, all 70 rolls match `cl_daily_roll_calendar.csv`.
+- **On the last session before a paper roll,** the expiring contract trades a median of about 40k contracts (range 20k–145k), against a median of about 218k on all sessions. It still trades in 326–330 of the 330 window minutes, so its reference prices exist.
+- **Roll-safe returns.** Every reference price for trade date t, including `p_prev_1330` on the previous trade date, comes from the contract held on t. A roll gap therefore never enters an overnight, daytime, or closing return. Raw prices are kept; there is no back-adjustment.
+- **Realized volatility.** Use the same contract over the same interval. On a roll date the overnight path starts on the previous trade date in the new contract, whose minutes are stored with `held = False`.
+
+### Files
+
+| File | Description |
+|---|---|
+| `processed/cl_minute_front_contracts.parquet` | 3.9 million validated 1-minute bars of the held and the next listed contract on every trade date. Columns: `timestamp` (CT, minute start), `ts_utc`, `trade_date`, `contract_id`, `instrument_id`, `symbol`, OHLC, `volume`, `held`, `folded`, `ohlc_ok`, `outlier_flag`, `outlier_corroborated`, `degraded_date`, `source`. |
+| `processed/cl_minute_reference_prices.parquet` | One row per trade date: held contract, `p_*` and `stale_*` for each reference time, `session_volume`, `roll_flag`, `early_close`, `low_volume`, `folded_holiday`, `degraded_date`, `complete`, `paper_sample`. Input to #28. |
+| `processed/cl_minute_session_quality.csv` | Per trade date: minutes traded by the held contract overnight (previous 13:30 to 08:00) and in the window (08:00 to 13:30), compared with the minutes in which any outright traded. Also missing minutes, longest gap, early-close time, volume, and flags. Gaps are counted only in minutes when the market traded, so scheduled halts, weekends, and holidays are not gaps. |
+| `processed/cl_minute_roll_calendar.csv`, `processed/cl_minute_roll_comparison.csv` | Paper-rule rolls, and the comparison with the existing pre-expiry rule. |
+| `processed/cl_minute_quality_summary.csv`, `processed/cl_minute_prepare.manifest.json` | All checks, and settings with input and output SHA256 hashes. |
+| `../reports/tables/cl_intraday_coverage.csv` | Monthly coverage inventory (#25). |
+
+### Checks and limitations
+
+- **Cross-check.** The 08:00, 13:00 and 13:30 prices match the closes of the existing 15-minute bars exactly, for the same contract, on every overlapping 2025–2026 session.
+- **Outliers.** A minute is flagged when its change exceeds 15 times the rolling median 1-minute change. 3,645 held-contract minutes are flagged, and 3,616 of them are matched by the next listed month in the same minute. Most fall at the 17:00 CT reopen, or are real shocks (June 2025, March and April 2026). Flags are reported, never removed.
+- **Fallback.** No fallback was needed, because the full overnight session was available. With endpoint prices alone, overnight returns could still be computed, but overnight realized volatility could not.

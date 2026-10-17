@@ -1,0 +1,85 @@
+{
+  "config": "config/prepare_intraday.yaml",
+  "settings": {
+    "input": "data/raw/crude_oil_conflict_1m.dbn",
+    "daily_config": "config/prepare_daily.yaml",
+    "daily_roll_calendar": "data/processed/cl_daily_roll_calendar.csv",
+    "output_dir": "data/processed",
+    "figure_dir": "reports/figures",
+    "session": {
+      "timezone": "America/Chicago",
+      "open_time": "17:00",
+      "close_time": "16:00",
+      "trade_window_start": "08:00",
+      "trade_window_end": "13:30"
+    },
+    "bars": {
+      "frequency": "15min"
+    },
+    "quality": {
+      "outlier_window": 920,
+      "outlier_threshold": 15
+    },
+    "development_share": 0.7
+  },
+  "shared_settings": {
+    "daily_config": "config/prepare_daily.yaml",
+    "contracts": {
+      "symbol_pattern": "^CL[FGHJKMNQUVXZ][0-9]{1,2}$"
+    },
+    "roll": {
+      "rule": "days_before_expiry",
+      "days_before_expiry": 3,
+      "adjustment": "additive"
+    }
+  },
+  "input": {
+    "file": "data/raw/crude_oil_conflict_1m.dbn",
+    "sha256": "3cefb2456d9fc6f7747bd9d8c8bc77ab9d6572b0d4c6e5c759a9b7db07ae7728"
+  },
+  "outputs": {
+    "contracts_15m": {
+      "file": "data/processed/cl_intraday_15m_contracts.parquet",
+      "sha256": "77acf6792fd1d49f067944cfb98a0b6193d3b13bb80b9b5b843a1a903bcefe77"
+    },
+    "continuous_15m": {
+      "file": "data/processed/cl_intraday_15m_continuous.parquet",
+      "sha256": "912cf25a754c787a8589d52b614f107b7127d01436fa0c504719a054a5ac9692"
+    },
+    "session_contracts": {
+      "file": "data/processed/cl_session_daily_contracts.parquet",
+      "sha256": "b4f1dcd51757ae3ae2b9dc1f4490dad428153ccefdd7581f4d246b60ed750982"
+    },
+    "session_continuous": {
+      "file": "data/processed/cl_session_daily_continuous.parquet",
+      "sha256": "f152eab12afe643af1c1aa62ce4dfc51f24feb8ba461a83fa7ac3c1ae0d2781c"
+    },
+    "roll_calendar": {
+      "file": "data/processed/cl_intraday_roll_calendar.csv",
+      "sha256": "15441dafb6dd2241b97083371db3130f93aa2c747243a26d48a20f67942c48c9"
+    },
+    "window_coverage": {
+      "file": "data/processed/cl_intraday_window_coverage.csv",
+      "sha256": "b37f3751137f0c67cd02c57f3629d73ee0024e50a0b9524f4c4dbad2410a3b86"
+    },
+    "session_coverage": {
+      "file": "data/processed/cl_intraday_session_coverage.csv",
+      "sha256": "41cf52c91dd210c953b775574eafba339bc6698b747576b18e2c592a39d89e0a"
+    },
+    "contract_coverage": {
+      "file": "data/processed/cl_intraday_contract_coverage.csv",
+      "sha256": "fba5eb184024161608543ab7f1ef2340afae8559892c11056ccdaa4f2947dced"
+    },
+    "quality_summary": {
+      "file": "data/processed/cl_intraday_quality_summary.csv",
+      "sha256": "71345082f618e1b029f90748906e0609cee1b46912474df17840ce9bccdac754"
+    },
+    "roll_figure": {
+      "file": "reports/figures/intraday_roll_examples.png",
+      "sha256": "d28870eeae1ef3dc74289a8864e69e5c2a6ad75acafe180c95769bc816198ab9"
+    }
+  },
+  "created_at_utc": "2026-10-17T23:03:16.270604+00:00",
+  "python": "3.12.11",
+  "pandas": "2.3.1"
+}

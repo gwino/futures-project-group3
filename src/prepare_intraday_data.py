@@ -73,14 +73,8 @@ def minute_of_day(clock: str) -> int:
 # --- Loading and session assignment -----------------------------------------------------------
 
 
-def load_raw(path: Path, symbol_pattern: str) -> tuple[pd.DataFrame, int, pd.Timestamp]:
-	"""Load 1-minute bars and keep outright contracts; returns the bars, the raw row count, and the query end.
-
-	Symbols are mapped from the file's instrument mappings instead of row by row, which is
-	much faster for the parent query (most rows are spreads).
-	"""
-	store = db.DBNStore.from_file(path)
-	raw = store.to_df(map_symbols=False).reset_index()
+def outright_symbols(store: db.DBNStore, symbol_pattern: str) -> dict[int, str]:
+	"""Map each outright instrument_id in the file to its raw symbol, using the file's instrument mappings."""
 	pattern = re.compile(symbol_pattern)
 	symbols: dict[int, str] = {}
 	for symbol, intervals in store.metadata.mappings.items():
@@ -89,6 +83,18 @@ def load_raw(path: Path, symbol_pattern: str) -> tuple[pd.DataFrame, int, pd.Tim
 				instrument_id = int(interval["symbol"])
 				if symbols.setdefault(instrument_id, symbol) != symbol:
 					raise ValueError(f"instrument_id {instrument_id} maps to more than one outright symbol.")
+	return symbols
+
+
+def load_raw(path: Path, symbol_pattern: str) -> tuple[pd.DataFrame, int, pd.Timestamp]:
+	"""Load 1-minute bars and keep outright contracts; returns the bars, the raw row count, and the query end.
+
+	Symbols are mapped from the file's instrument mappings instead of row by row, which is
+	much faster for the parent query (most rows are spreads).
+	"""
+	store = db.DBNStore.from_file(path)
+	raw = store.to_df(map_symbols=False).reset_index()
+	symbols = outright_symbols(store, symbol_pattern)
 	bars = raw[raw["instrument_id"].isin(symbols)].copy()
 	bars["symbol"] = bars["instrument_id"].map(symbols)
 	bars = bars.rename(columns={"ts_event": "ts_utc"})

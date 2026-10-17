@@ -1,0 +1,89 @@
+{
+  "config": "config/prepare_daily.yaml",
+  "settings": {
+    "input": "data/raw/crude_oil_all_daily.dbn",
+    "continuous_check": "data/raw/crude_oil_continuous_daily.dbn",
+    "output_dir": "data/processed",
+    "session": {
+      "timezone": "America/Chicago",
+      "close_time": "16:00",
+      "fold_non_trading_days": true,
+      "juneteenth_from": "2022-06-19"
+    },
+    "contracts": {
+      "symbol_pattern": "^CL[FGHJKMNQUVXZ][0-9]{1,2}$"
+    },
+    "roll": {
+      "rule": "days_before_expiry",
+      "days_before_expiry": 3,
+      "adjustment": "additive"
+    },
+    "quality": {
+      "outlier_window": 60,
+      "outlier_threshold": 12
+    },
+    "degraded_dates": [
+      "2014-06-11",
+      "2014-06-12",
+      "2014-06-13",
+      "2014-06-15",
+      "2014-09-22",
+      "2014-09-23",
+      "2014-09-24",
+      "2014-09-25",
+      "2017-11-13",
+      "2018-10-21",
+      "2019-01-15",
+      "2019-02-22",
+      "2019-03-13",
+      "2019-03-26",
+      "2020-02-27",
+      "2020-02-28",
+      "2020-05-05",
+      "2020-06-30",
+      "2020-07-01",
+      "2021-12-05",
+      "2022-01-02",
+      "2024-09-18",
+      "2025-09-17",
+      "2025-09-24",
+      "2025-11-28",
+      "2026-01-31",
+      "2026-03-15",
+      "2026-03-16",
+      "2026-03-21",
+      "2026-04-10",
+      "2026-05-24",
+      "2026-08-29"
+    ]
+  },
+  "input": {
+    "file": "data/raw/crude_oil_all_daily.dbn",
+    "sha256": "887c43f24ed065b1236a7186834b9293d9126a020b20ec5582773d719bd45850"
+  },
+  "outputs": {
+    "contracts": {
+      "file": "data/processed/cl_daily_contracts.parquet",
+      "sha256": "fa7557270bdc23cfc6015d69d5c8f5e1a738dce62f581bbe97e4e5c6ca4e557e"
+    },
+    "continuous": {
+      "file": "data/processed/cl_daily_continuous.parquet",
+      "sha256": "2358d512a875d25248c9b68cec7ef48c60151fe1a010f7f15d8e82898ca49c7c"
+    },
+    "roll_calendar": {
+      "file": "data/processed/cl_daily_roll_calendar.csv",
+      "sha256": "c11018654a9be84413003e017cc9bcb00d585892357a815bdcd319878b5a9a2d"
+    },
+    "contract_quality": {
+      "file": "data/processed/cl_daily_contract_quality.csv",
+      "sha256": "7b2802b469a977cf233ea7934b6c11f573d028f9a1efbc81c32d90b5ae3d04dd"
+    },
+    "quality_summary": {
+      "file": "data/processed/cl_daily_quality_summary.csv",
+      "sha256": "44e1351ae798cab141f3dcaad197c159884f8001f09f2ce1dd66cfd54dfa8985"
+    }
+  },
+  "created_at_utc": "2026-10-17T23:02:58.666825+00:00",
+  "python": "3.12.11",
+  "pandas": "2.3.1"
+}

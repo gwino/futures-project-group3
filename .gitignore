@@ -6,7 +6,7 @@ __pycache__/
 .env
 
 data/raw/
-data/processed/
+# Processed outputs are shared with the team; parquet files go through Git LFS (.gitattributes).
 
 .ipynb_checkpoints/
 .DS_Store

@@ -1,0 +1,58 @@
+# Settings for src/prepare_minute_data.py: full-session 1-minute CL bars and the reference prices
+# of Baltussen, Da, Lammers & Martens (2021) for the 2021-2026 replication (#25-#27).
+
+# Raw Databento GLBX.MDP3 ohlcv-1m files for parent CL.FUT, in time order. Their query ranges must
+# be contiguous (each file's end equals the next file's start).
+inputs:
+  - data/raw/crude_oil_2021_2024_1m.dbn   # config/intraday_2021_2024.yaml, 2020-12-01 to 2025-01-01
+  - data/raw/crude_oil_conflict_1m.dbn    # config/intraday.yaml, 2025-01-01 to 2026-10-08
+# Contract pattern, holiday calendar, and degraded dates are shared with the daily pipeline.
+daily_config: config/prepare_daily.yaml
+# Optional cross-check of the comparison roll rule against the daily roll calendar (#17/#18).
+daily_roll_calendar: data/processed/cl_daily_roll_calendar.csv
+output_dir: data/processed
+coverage_table: reports/tables/cl_intraday_coverage.csv
+
+session:
+  timezone: America/Chicago
+  # A trade date runs from open_time on the prior trade date to close_time (the Globex daily halt).
+  open_time: "17:00"
+  close_time: "16:00"
+  # A trade date is an early close when the market's last outright minute starts this many
+  # minutes or more before close_time (for example 12:00 or 12:45 CT on CME holidays).
+  early_close_minutes: 30
+
+reference:
+  # The price at time T is the close of the last 1-minute bar that starts before T (Databento
+  # ts_event marks the start of the minute), so it uses only trades before T. The bar starting at
+  # T - 1 minute is preferred; if that minute had no trade, the most recent bar of the same
+  # contract is used when it starts at most max_stale_minutes earlier. Otherwise the price is
+  # missing. Prices are never forward-filled beyond that limit.
+  previous_close: "13:30"   # on the previous trade date: P_{c,t-1}
+  points: ["08:00", "08:30", "12:30", "13:00", "13:30"]   # on the trade date: open, FH end, M end, SLH end, close
+  max_stale_minutes: 5
+
+roll:
+  # Paper convention: hold the most liquid contract and roll when the next contract's daily
+  # (17:00-16:00 CT session) volume exceeds the held contract's. The crossover session's volume is
+  # known at its 16:00 close, so the switch takes effect at the next session's 17:00 open.
+  # days_before_expiry is only a backstop: the switch happens no later than that many trade dates
+  # before the held contract's last trade date.
+  rule: volume_crossover
+  days_before_expiry: 1
+  # Existing pre-expiry roll from the daily and 15-minute pipelines (#17/#18), reported for comparison.
+  comparison_rule: days_before_expiry
+  comparison_days_before_expiry: 3
+
+filters:
+  # Paper sample filters (Baltussen et al. 2021, Section 2, following Barndorff-Nielsen et al. 2008).
+  # Non-positive prices are removed; early-close and low-volume trade dates are flagged and kept out
+  # of `paper_sample` but stay in the files.
+  min_session_volume: 100
+
+quality:
+  # Flag a minute close-to-close change as an outlier when it exceeds this multiple of the
+  # contract's rolling median absolute change over the previous outlier_window minutes (about
+  # 10 sessions). Flags are reported, never removed.
+  outlier_window: 13800
+  outlier_threshold: 15

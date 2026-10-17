@@ -1,0 +1,27 @@
+check,value,note
+raw_rows,777383,
+raw_ts_monotonic_in_file,True,
+raw_missing_values,0,
+non_outright_rows_excluded,667421,calendar spreads and other strategies
+outright_rows,109962,
+duplicate_instrument_timestamp_rows_removed,0,
+ts_monotonic_within_each_instrument,True,
+sunday_bars_folded,9267,"Sunday-evening open, part of Monday's session"
+holiday_bars_folded,1963,early-halt holiday sessions settle on the next trade date
+session_rows,98818,
+sample_trade_dates,4114,2010-06-07 to 2026-10-07
+trade_dates_without_any_outright,4,"2014-06-13, 2014-09-23, 2014-09-24, 2014-09-25 (all within Databento degraded dates)"
+ohlc_inconsistent_sessions,0,
+negative_volume_sessions,0,
+zero_volume_sessions,0,
+nonpositive_price_sessions,2,CLK0 2020-04-20 low=-40.32 close=-2.67; CLK0 2020-04-21 low=-10.0 close=9.06
+sessions_on_degraded_dates,621,"flagged, not removed"
+contracts,248,
+expired_contracts_last_session_on_computed_ltd,169/169,
+outlier_sessions_all_contracts,75,"flagged, not removed"
+timestamp_monotonic_within_each_contract,True,America/Chicago
+rolls,196,"rule=days_before_expiry, days_before_expiry=3"
+continuous_sessions,4110,
+continuous_missing_trade_dates,4,
+continuous_outlier_sessions,4,CLJ2020 2020-03-09 -9.15 (next month -9.03); CLF2022 2021-11-26 -10.19 (next month -9.90); CLJ2022 2022-03-09 -14.70 (next month -14.05); CLJ2026 2026-03-06 +11.85 (next month +10.39)
+continuous_degraded_sessions,27,"flagged, not removed"
