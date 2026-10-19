@@ -1,0 +1,136 @@
+{
+  "config": "config/prepare_minute.yaml",
+  "settings": {
+    "inputs": [
+      "data/raw/crude_oil_2021_2024_1m.dbn",
+      "data/raw/crude_oil_conflict_1m.dbn"
+    ],
+    "daily_config": "config/prepare_daily.yaml",
+    "daily_roll_calendar": "data/processed/cl_daily_roll_calendar.csv",
+    "output_dir": "data/processed",
+    "coverage_table": "reports/tables/cl_intraday_coverage.csv",
+    "session": {
+      "timezone": "America/Chicago",
+      "open_time": "17:00",
+      "close_time": "16:00",
+      "early_close_minutes": 30
+    },
+    "reference": {
+      "previous_close": "13:30",
+      "points": [
+        "08:00",
+        "08:30",
+        "12:30",
+        "13:00",
+        "13:30"
+      ],
+      "max_stale_minutes": 5
+    },
+    "roll": {
+      "rule": "volume_crossover",
+      "days_before_expiry": 1,
+      "comparison_rule": "days_before_expiry",
+      "comparison_days_before_expiry": 3
+    },
+    "filters": {
+      "min_session_volume": 100
+    },
+    "quality": {
+      "outlier_window": 13800,
+      "outlier_threshold": 15
+    }
+  },
+  "shared_settings": {
+    "daily_config": "config/prepare_daily.yaml",
+    "contracts": {
+      "symbol_pattern": "^CL[FGHJKMNQUVXZ][0-9]{1,2}$"
+    },
+    "degraded_dates": [
+      "2014-06-11",
+      "2014-06-12",
+      "2014-06-13",
+      "2014-06-15",
+      "2014-09-22",
+      "2014-09-23",
+      "2014-09-24",
+      "2014-09-25",
+      "2017-11-13",
+      "2018-10-21",
+      "2019-01-15",
+      "2019-02-22",
+      "2019-03-13",
+      "2019-03-26",
+      "2020-02-27",
+      "2020-02-28",
+      "2020-05-05",
+      "2020-06-30",
+      "2020-07-01",
+      "2021-12-05",
+      "2022-01-02",
+      "2024-09-18",
+      "2025-09-17",
+      "2025-09-24",
+      "2025-11-28",
+      "2026-01-31",
+      "2026-03-15",
+      "2026-03-16",
+      "2026-03-21",
+      "2026-04-10",
+      "2026-05-24",
+      "2026-08-29"
+    ]
+  },
+  "inputs": [
+    {
+      "source": "0",
+      "file": "data/raw/crude_oil_2021_2024_1m.dbn",
+      "start": "2020-12-01 00:00:00+00:00",
+      "end": "2025-01-01 00:00:00+00:00",
+      "raw_rows": "26343989",
+      "outright_rows": "7501614",
+      "sha256": "8c420ea81d33dd9c500fffac57bf0411f78ac534fd7f885eb745c791ac2cb3a8"
+    },
+    {
+      "source": "1",
+      "file": "data/raw/crude_oil_conflict_1m.dbn",
+      "start": "2025-01-01 00:00:00+00:00",
+      "end": "2026-10-08 00:00:00+00:00",
+      "raw_rows": "15196660",
+      "outright_rows": "3641915",
+      "sha256": "3cefb2456d9fc6f7747bd9d8c8bc77ab9d6572b0d4c6e5c759a9b7db07ae7728"
+    }
+  ],
+  "outputs": {
+    "front_minutes": {
+      "file": "data/processed/cl_minute_front_contracts.parquet",
+      "sha256": "c124ee2ed5ea14fd6fc9bc3e6d4c122e4ead90528efc28bb5949b8ad9ed2d95d"
+    },
+    "reference_prices": {
+      "file": "data/processed/cl_minute_reference_prices.parquet",
+      "sha256": "f7ff50da8f6470c90a46a69956d747b343bf78091e7b3bd0a6ccbbb055aff8c5"
+    },
+    "session_quality": {
+      "file": "data/processed/cl_minute_session_quality.csv",
+      "sha256": "34ad8602d03014e3c15ae77de40d4d9510ab08692f6f38faa353f0a16aa4a952"
+    },
+    "roll_calendar": {
+      "file": "data/processed/cl_minute_roll_calendar.csv",
+      "sha256": "7bffa05d28e27eca7dc75c72009b56bd7d64ed704a6cfcb2d8f8e8e571eef05b"
+    },
+    "roll_comparison": {
+      "file": "data/processed/cl_minute_roll_comparison.csv",
+      "sha256": "fa2b15ae145ca56cb8015e182364951a019d27b8bf4152bba7f41c39441a8226"
+    },
+    "quality_summary": {
+      "file": "data/processed/cl_minute_quality_summary.csv",
+      "sha256": "e347aab0e76f7f884d615db631358670345026da5acb9ba39d84728e5278e3a3"
+    },
+    "coverage_table": {
+      "file": "reports/tables/cl_intraday_coverage.csv",
+      "sha256": "18ee033921a40fdcd3b3761ac9d67d280d1647af8852210e776f42da4fb503dc"
+    }
+  },
+  "created_at_utc": "2026-10-17T23:13:36.812515+00:00",
+  "python": "3.12.11",
+  "pandas": "2.3.1"
+}

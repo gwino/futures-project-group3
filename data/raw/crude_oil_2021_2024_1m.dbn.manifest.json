@@ -1,0 +1,16 @@
+{
+  "config": "config/intraday_2021_2024.yaml",
+  "query": {
+    "dataset": "GLBX.MDP3",
+    "schema": "ohlcv-1m",
+    "symbols": "CL.FUT",
+    "stype_in": "parent",
+    "start": "2020-12-01",
+    "end": "2025-01-01",
+    "output": "data/raw/crude_oil_2021_2024_1m.dbn"
+  },
+  "downloaded_at_utc": "2026-10-17T23:09:19.968948+00:00",
+  "file": "data/raw/crude_oil_2021_2024_1m.dbn",
+  "sha256": "8c420ea81d33dd9c500fffac57bf0411f78ac534fd7f885eb745c791ac2cb3a8",
+  "python": "3.12.11"
+}

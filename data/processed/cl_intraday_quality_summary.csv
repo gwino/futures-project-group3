@@ -1,0 +1,36 @@
+check,value,note
+raw_rows,15196660,
+non_outright_rows_excluded,11554745,calendar spreads and other strategies
+outright_rows,3641915,
+outright_missing_values,0,
+duplicate_instrument_timestamp_rows_removed,0,
+ts_monotonic_within_each_instrument,True,
+after_close_minutes_dropped,2,CLM6 2025-11-20 16:00:00-06:00 volume=1; CLQ6 2026-05-18 16:00:00-05:00 volume=1
+folded_minutes,63723,holiday sessions folded into the next trade date
+incomplete_trade_date_minutes_dropped,310,2026-10-08 (query ends 2026-10-08 00:00:00+00:00)
+sample_trade_dates,443,2025-01-02 to 2026-10-07
+trade_dates_without_any_outright,0,
+contracts,71,
+expired_contracts_last_session_on_computed_ltd,6/6,
+bars_15min,456260,from 3641603 1-minute rows
+ohlc_inconsistent_bars,0,
+ohlc_inconsistent_sessions,0,
+negative_volume_bars,0,
+zero_volume_bars,0,
+nonpositive_price_bars,0,
+bars_on_degraded_dates,4614,"flagged, not removed"
+outlier_bars_all_contracts,805,"flagged, not removed"
+rolls,21,"rule=days_before_expiry, days_before_expiry=3"
+roll_gap_intraday_minus_session,"median=0.000, max=0.000","absolute difference between the 15-minute and session-close gaps, USD/bbl"
+rolls_match_daily_roll_calendar,21/21,21 daily rolls in the same period
+session_continuous_trade_dates,443,
+intraday_continuous_bars,41740,
+intraday_and_session_hold_same_contract,True,
+trade_dates_with_full_window,442/443,22 bars from 08:00 to 13:30 CT; short: 2025-12-24 (19)
+missing_window_bars,3,against a fixed 22-bar window
+contract_session_bars_observed,456260/1700563,"all 71 contracts over 18053 contract-sessions; deferred months trade sparsely, see cl_intraday_session_coverage.csv and cl_intraday_contract_coverage.csv"
+held_contract_missing_bars,0,of 41740 expected bars in 443 held sessions; longest gap 0 bars
+held_contract_missing_window_bars,0,of 9743 window bars in which the market traded
+window_share_of_held_volume,53.4%,share of the held contract's volume traded inside the trading window
+continuous_outlier_bars,125,125 corroborated by the next listed month; not corroborated: none
+common_window_split,2026-03-27 / 2026-03-30,last development / first holdout trade date (310 of 443 trade dates)

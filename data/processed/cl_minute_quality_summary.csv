@@ -1,0 +1,37 @@
+check,value,note
+raw_rows[crude_oil_2021_2024_1m.dbn],26343989,2020-12-01 00:00:00+00:00 to 2025-01-01 00:00:00+00:00; 7501614 outright rows
+raw_rows[crude_oil_conflict_1m.dbn],15196660,2025-01-01 00:00:00+00:00 to 2026-10-08 00:00:00+00:00; 3641915 outright rows
+outright_rows,11143529,calendar spreads and other strategies excluded
+outright_missing_values,0,
+duplicate_instrument_minute_rows_removed,0,includes any overlap between input files
+nonpositive_price_minutes_removed,0,paper filter (i); 
+after_close_minutes_dropped,3,CLZ4 2024-11-15 16:00:00-06:00 volume=1; CLQ6 2026-05-18 16:00:00-05:00 volume=1; CLM6 2025-11-20 16:00:00-06:00 volume=1
+partial_session_minutes_dropped,7267,"trade dates cut by the query range: 2020-12-01, 2026-10-08"
+folded_minutes,182142,weekend-holiday sessions folded into the next trade date
+ohlc_inconsistent_minutes,0,"flagged, not removed"
+negative_volume_minutes,0,
+zero_volume_minutes,0,
+sample_trade_dates,1469,2020-12-02 to 2026-10-07
+trade_dates_without_any_outright,0,
+contracts,121,
+expired_contracts_last_session_on_computed_ltd,51/51,
+rolls,70,"rule=volume_crossover, backstop 1 trade date(s) before expiry"
+first_volume_crossover_sessions_before_expiry,"2: 59, 3: 11",paper rolls set by the backstop: 0
+roll_sessions_before_expiry,"1: 59, 2: 11",trade dates between the roll date and the expiring contract's last trade date
+roll_paper_minus_pre_expiry_sessions,"+1: 11, +2: 59",positive means the paper rule rolls later than the 3-day pre-expiry rule
+pre_expiry_rolls_match_daily_roll_calendar,70/70,70 daily rolls in the same period
+held_outlier_minutes,3645,3616 corroborated by the next listed month; not corroborated: CLK2026 2026-04-07 17:32:00-05:00 105.96; CLK2026 2026-04-07 17:53:00-05:00 97.78; CLK2026 2026-04-07 18:05:00-05:00 94.31; CLU2023 2023-08-06 17:02:00-05:00 82.96; CLJ2024 2024-03-05 09:50:00-06:00 79.17; CLX2026 2026-09-20 17:00:00-05:00 96.95; CLN2025 2025-06-12 21:39:00-05:00 77.18; CLN2025 2025-06-12 21:44:00-05:00 76.82; CLN2025 2025-06-12 21:48:00-05:00 75.72; CLN2025 2025-06-12 22:00:00-05:00 75.95; CLU2026 2026-07-19 17:00:00-05:00 83.87; CLJ2021 2021-02-18 17:00:00-06:00 60.08; CLJ2026 2026-03-01 17:11:00-06:00 71.80; CLJ2026 2026-03-08 17:02:00-05:00 102.21; CLJ2026 2026-03-08 17:10:00-05:00 110.33; CLJ2026 2026-03-08 21:51:00-05:00 115.95; CLJ2026 2026-03-09 00:37:00-05:00 107.51; CLJ2026 2026-03-09 00:49:00-05:00 103.63; CLJ2026 2026-03-09 00:50:00-05:00 104.10; CLJ2026 2026-03-09 01:19:00-05:00 103.98
+held_sessions,1469,2054268 held-contract minutes
+reference_prev_1330,1462/1469,"stale (>0 min): 0, missing: 7: 2020-12-02, 2020-12-28, 2021-11-29, 2022-11-28, 2023-11-27, 2024-12-26, 2025-12-26"
+reference_0800,1469/1469,"stale (>0 min): 0, missing: 0: "
+reference_0830,1469/1469,"stale (>0 min): 0, missing: 0: "
+reference_1230,1469/1469,"stale (>0 min): 0, missing: 0: "
+reference_1300,1463/1469,"stale (>0 min): 0, missing: 6: 2020-12-24, 2021-11-26, 2022-11-25, 2023-11-24, 2024-12-24, 2025-12-24"
+reference_1330,1463/1469,"stale (>0 min): 0, missing: 6: 2020-12-24, 2021-11-26, 2022-11-25, 2023-11-24, 2024-12-24, 2025-12-24"
+complete_reference_sessions,1456/1469,
+early_close_sessions,8,"2020-12-24 (12:45), 2021-11-26 (12:45), 2022-11-25 (12:45), 2023-11-24 (12:45), 2024-11-29 (13:45), 2024-12-24 (12:45), 2025-11-28 (13:45), 2025-12-24 (12:45)"
+low_volume_sessions,0,held contract volume < 100
+paper_sample_sessions,1454/1469,"complete, not an early close, volume >= threshold"
+window_missing_minutes,15,"held-contract minutes without a trade while another outright traded, 08:00-13:30; longest gap 1 min"
+overnight_missing_minutes,8650,previous 13:30 to 08:00; sessions without any overnight minute: 0
+degraded_sessions,13,"flagged, not removed"

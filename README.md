@@ -26,8 +26,7 @@ CL is one of the energy futures in the original paper. Its individual historical
 | Dataset | Current coverage | Intended use |
 | --- | --- | --- |
 | CL daily history | **2010–2026** | Existing resource for contract/volume metadata, roll cross-checks, and broader context; **not** a daily-strategy comparison |
-| CL intraday history | **2025–2026** | Audit actual frequency, trading-hour coverage, bar timestamps, contract IDs, and quality before reuse |
-| Missing minute history | **Primarily 2021–2024** | Procure as needed, after assessing price and existing gaps |
+| CL 1-minute history | **2020-12 to 2026-10** (full electronic session) | Downloaded and cleaned (#25–#27); 1,436 replication sessions from 2021-01-04. See `data/README.md` and `reports/minute_dataset_handoff.md` |
 | Target analysis | **2021–2026** | One-minute CL OHLCV, ideally across the entire available electronic trading session |
 
 A full electronic-session minute history allows the project to calculate **overnight realized volatility** as well as daytime realized volatility. To compute overnight *returns* alone, only the prior close and current opening reference prices are necessary. Level 2 order-book data is **not required**.
