@@ -64,6 +64,11 @@
       "exclude_extreme_rod": {
         "column": "r_rod",
         "abs_quantile_above": 0.99
+      },
+      "exclude_2026_03_10": {
+        "dates": [
+          "2026-03-10"
+        ]
       }
     },
     "paper": {
@@ -148,7 +153,7 @@
     },
     "robustness": {
       "file": "reports/tables/replication_robustness.csv",
-      "sha256": "0fe1a2288fc2e370fde4882836d7c5dbfc4b8078d823f590fc5fad4da7e90e30"
+      "sha256": "95ea01ef22eae06a428a08038b83efccab01ee01697e2558a3fed182e646b2c2"
     },
     "by_year": {
       "file": "reports/tables/replication_by_year.csv",
@@ -171,7 +176,7 @@
       "sha256": "aa51c1dea1144c3495d2df6c70302ae3cb951105d91494012d6681e6a5308352"
     }
   },
-  "created_at_utc": "2026-10-20T03:29:32.596591+00:00",
+  "created_at_utc": "2026-10-20T21:59:35.867117+00:00",
   "python": "3.11.8",
   "pandas": "2.2.3",
   "numpy": "2.1.3"

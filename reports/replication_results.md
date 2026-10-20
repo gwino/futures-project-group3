@@ -29,7 +29,7 @@ The quantity of interest is each slope β, which we report with its standard err
 
 **Sample.** We use 1,436 CME trade dates from 4 January 2021 to 7 October 2026, from Databento 1-minute bars (#25–#28). Every price on day t comes from the contract held on t, so no return crosses a contract roll. We apply the paper's filters: no early-close days and no days with volume under 100 contracts. The paper's CL sample has 8,336 days, from 1987 to May 2020 (Appendix Table B3).
 
-**Inference.** We use Newey-West standard errors with 7 lags, the usual automatic choice of ⌊4(n/100)^(2/9)⌋. The paper uses Newey-West for individual contracts but does not state its lag length. The paper reports t-statistics rather than standard errors, so we recover its standard errors as |β / t|.
+**Inference.** We use Newey-West standard errors with 7 lags, the usual automatic choice of ⌊4(n/100)^(2/9)⌋. The paper uses Newey-West for individual contracts but does not state its lag length. The calendar-year and 252-day rolling estimates use the same 7 lags. The automatic rule would give 4 for about 250 observations, and using 4 changes those standard errors by a median of 0.6% (at most 8%). The paper reports t-statistics rather than standard errors, so we recover its standard errors as |β / t|.
 
 **Out-of-sample test.** For each day after the first 500 observations (forecasts start on 4 January 2023, 936 forecasts), we fit the model on all earlier days and forecast LH. We compare these forecasts with the historical mean of LH up to the previous day:
 
@@ -59,8 +59,9 @@ Slopes × 100, with 95% confidence intervals in brackets. Adjusted R² and OOS R
 ![Slopes against the paper](figures/replication_vs_paper.png)
 
 - **No intraday momentum in CL after 2020.** Every 95% interval contains zero. The point estimates for ONFH, M and ROD are negative, the opposite sign to the paper's, which points to mild reversal rather than momentum. For ROD, the estimate of −1.46 means that a 1% rest-of-day return predicts a −0.015% last-half-hour return. The 95% interval runs from −0.034% to +0.004%.
+- **One day drives much of the negative slope.** Without 10 March 2026, the ROD slope is −0.67 [−1.96, 0.62], less than half the full-sample value. With a Cook's distance of 1.28, against 0.10 for the next most influential day, it is by far the most influential observation (see Robustness).
 - **The data cannot tell the two periods apart.** Each difference between our slope and the paper's is at most 1.6 standard errors (treating the samples as independent). This is consistent with the paper, whose CL slopes were not significant either (ROD t = 0.25).
-- **Our estimates are about three times as precise as the paper's**, although we have one sixth of its observations: the ROD standard error is 0.97 here and 2.68 in the paper. One possible cause, which we cannot verify, is a few extreme observations in the paper's sample. That sample ends on 1 May 2020, just after the April 2020 episode when the front CL contract traded near and below zero, where simple returns become very large. That would also explain the paper's adjusted R² of 1.25% in Model 2, despite all three t-statistics being below 1.2.
+- **Our estimates are about three times as precise as the paper's**, although we have one sixth of its observations: the ROD standard error is 0.97 here and 2.68 in the paper. One possible cause, which we cannot check, is that a few extreme days carry much of the variation in the paper's longer sample, as 10 March 2026 does in ours. A few such days would also be consistent with the paper's adjusted R² of 1.25% in Model 2, despite all three t-statistics being below 1.2. Note that the negative May 2020 prices of 20 April 2020 are probably not in the paper's sample: under its volume rule, the held contract had most likely rolled to June by then.
 
 ### Over time
 
@@ -79,7 +80,11 @@ The figure shows 252-day rolling estimates with 95% bands, calendar-year estimat
 The figure plots the running sum of (historical-mean squared error − model squared error). A rising line means the model is beating the historical mean.
 
 - **ONFH and ONFH + M + SLH** lose to the historical mean (OOS R² −0.42% and −1.49%), as they did in the paper (−0.48% and −1.77%).
-- **ROD** ends with a small positive OOS R² of 0.37%, but the Clark-West test does not reject the historical mean (t = 1.00, one-sided p = 0.16). The gain is concentrated in March 2026. A single day, 10 March 2026, contributes most of it: ROD was −15.4% and LH +4.6%, a reversal that the negative slope forecast correctly in sign. Without March 2026 the OOS R² is 0.20%. Without that single day it is −0.22%, so the positive value should not be read as evidence that ROD forecasts LH (see `analysis/04_replication_results.ipynb`, Section 4).
+- **ROD** ends with a small positive OOS R² of 0.37%, but the Clark-West test does not reject the historical mean (t = 1.00, one-sided p = 0.16). The gain is concentrated in March 2026. A single day, 10 March 2026, contributes most of it: ROD was −15.4% and LH +4.6%, a reversal that the negative slope forecast correctly in sign. Without March 2026 the OOS R² is 0.20%. Leaving out that single day gives a negative OOS R² either way: −0.22% when only its forecast is removed, and −0.06% when the day is also left out of every estimation window (the robustness row below). The positive value should therefore not be read as evidence that ROD forecasts LH (see `analysis/04_replication_results.ipynb`, Section 4).
+- **What happened on 10 March 2026.** The day fell during the Iran war and the Strait of Hormuz closure. Crude had sold off from a $119 overnight high on 9 March, after President Trump suggested the war was nearing its end. On 10 March:
+  - Just after 12:00 CT, the Energy Secretary posted, and within about half an hour deleted, a claim that the US Navy had escorted a tanker through the strait. The held contract fell 7% in 20 minutes, to 76.73.
+  - From 13:13 CT the price jumped about 7% in six minutes, which gives LH of +4.55%. The White House denied that any escort had taken place, which is consistent with the rebound, but we could not confirm the time of the denial.
+  - The day is a genuine crisis-day reversal: the next contract, CLK2026, made the same moves, and the prices agree with Databento's daily bars. It therefore stays in the sample, and its influence is shown as a robustness row.
 - **First forecast date.** The ROD OOS R² depends on when forecasting starts: −0.02% from 2022, 0.37% from 2023, 0.49% from 2024 and 0.58% from 2025. The Clark-West p-value is between 0.16 and 0.28 in every case (`replication_oos_sensitivity.csv`).
 
 ### Robustness
@@ -95,11 +100,14 @@ Each row re-estimates the ROD model (slope × 100, standard error in parentheses
 | Without Databento degraded dates | 1,424 | −1.55 (0.98) | 0.51 |
 | Without the last 3 sessions before expiry | 1,309 | −1.46 (1.02) | 0.34 |
 | Without days after a weekend or holiday | 1,132 | −1.25 (1.23) | −0.32 |
-| Without the 1% largest absolute ROD days | 1,421 | −0.76 (0.66) | 0.14 |
+| Without the 1% largest absolute ROD days | 1,421 | −0.76 (0.66) | 0.14¹ |
+| Without 10 March 2026 | 1,435 | −0.67 (0.66) | −0.06 |
+
+¹ The 1% threshold is the 99th percentile of \|ROD\| over the full sample, so this row's OOS R² uses information from after each forecast date. It is a robustness check, not a forecast that could have been made in real time.
 
 - **The sign does not change.** The negative slope holds under every lag length, both roll rules, and every exclusion.
 - **The roll rule barely matters.** Holding the next contract 1–2 sessions earlier, as the existing pre-expiry rule does, changes the contract on 127 days but moves the ROD slope by only 0.03.
-- **Extreme days matter most.** Dropping the 15 days with the largest ROD moves (8 in March–April 2026, 5 in March and July 2022, 1 in June 2025 and 1 in July 2026) halves the slope, to −0.76. This shows that the negative estimate is driven partly by reversals on crisis days.
+- **Extreme days matter most, and one of them above all.** Dropping the 15 days with the largest ROD moves (8 in March–April 2026, 5 in March and July 2022, 1 in June 2025 and 1 in July 2026) halves the slope, to −0.76. Dropping only 10 March 2026 moves it further, to −0.67. The negative estimate is therefore driven largely by crisis-day reversals, and mostly by one of them. The March–April 2026 days all come from the same conflict, so we treat them as a volatility-regime question for #32, not as outliers to remove.
 
 ## Differences from the paper
 
@@ -117,7 +125,7 @@ Each row re-estimates the ROD model (slope × 100, standard error in parentheses
 
 ## Conclusion
 
-In 2021–2026 we find **no evidence of intraday momentum in CL**. The slopes are small and slightly negative, every confidence interval includes zero, and only the ROD model beats the historical mean out of sample. That small gain is not statistically distinguishable from zero and comes mostly from March 2026. This agrees with the paper's own CL result, which was not significant either. In the new hypotheses (#31–#33), the questions are therefore whether the overnight and daytime parts of ROD predict differently, and whether the reversal seen on extreme days is a volatility-regime effect (#32), rather than whether CL momentum exists.
+In 2021–2026 we find **no evidence of intraday momentum in CL**. The slopes are small and slightly negative, every confidence interval includes zero, and only the ROD model beats the historical mean out of sample. That small gain is not statistically distinguishable from zero, and it turns negative without 10 March 2026. That day also accounts for more than half of the negative full-sample ROD slope. This agrees with the paper's own CL result, which was not significant either. In the new hypotheses (#31–#33), the questions are therefore whether the overnight and daytime parts of ROD predict differently, and whether the reversal seen on extreme days is a volatility-regime effect (#32), rather than whether CL momentum exists.
 
 ## Reproducing
 

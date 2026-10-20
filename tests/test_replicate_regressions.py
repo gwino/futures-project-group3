@@ -86,3 +86,18 @@ def test_exclusion_rules():
 	assert exclusion_mask(sample.astype({"sessions_to_expiry": "Int64"}), {"column": "sessions_to_expiry", "at_most": 3}).tolist() == [True, True, False, False]
 	assert exclusion_mask(sample, {"column": "gap_days", "above": 1}).tolist() == [False, True, False, False]
 	assert exclusion_mask(sample, {"column": "r_rod", "abs_quantile_above": 0.75}).tolist() == [False, True, False, False]
+	dated = sample.assign(trade_date=pd.to_datetime(["2026-03-09", "2026-03-10", "2026-03-11", "2026-03-12"]))
+	assert exclusion_mask(dated, {"dates": ["2026-03-10"]}).tolist() == [False, True, False, False]
+
+
+def test_importing_the_module_keeps_the_matplotlib_backend():
+	# The Agg backend is set in main(), so notebooks that import the module keep inline figures.
+	import importlib
+
+	import matplotlib
+
+	import src.replicate_regressions as module
+
+	before = matplotlib.get_backend()
+	importlib.reload(module)
+	assert matplotlib.get_backend() == before

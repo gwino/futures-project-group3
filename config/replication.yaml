@@ -40,13 +40,17 @@ rolling:
 
 robustness:
   # Each variant re-estimates every model without the sample dates that match its rule: a boolean
-  # column (true is dropped), a column at_most / above a value, or |column| above a sample quantile.
-  # The HAC lag variants and the pre-expiry roll rule are added by the script.
+  # column (true is dropped), a column at_most / above a value, |column| above a sample quantile, or
+  # a list of dates. The HAC lag variants and the pre-expiry roll rule are added by the script.
+  # The quantile is taken over the full sample, so that variant's OOS R2 uses future information.
   exclude_roll_dates: {column: roll_flag}
   exclude_degraded_dates: {column: degraded_date}
   exclude_expiry_adjacent: {column: sessions_to_expiry, at_most: 3}
   exclude_after_non_trading_days: {column: gap_days, above: 1}
   exclude_extreme_rod: {column: r_rod, abs_quantile_above: 0.99}
+  # The single most influential day (Cook's distance 1.28; next largest 0.10): an intraday crisis
+  # reversal during the 2026 Strait of Hormuz closure. Valid data, kept in the baseline.
+  exclude_2026_03_10: {dates: ["2026-03-10"]}
 
 paper:
   # Appendix Table B3, Panel B, CL: 1987-01-06 to 2020-05-01, 8,336 days, 09:00-14:30 ET (08:00-13:30 CT).

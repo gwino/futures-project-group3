@@ -32,8 +32,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import matplotlib
-
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -175,6 +173,8 @@ def estimate_models(sample: pd.DataFrame, models: dict, target: str, lags: int, 
 
 def exclusion_mask(sample: pd.DataFrame, rule: dict) -> pd.Series:
 	"""True for the dates a robustness rule drops."""
+	if "dates" in rule:
+		return sample["trade_date"].isin(pd.to_datetime(rule["dates"]))
 	column = sample[rule["column"]]
 	if "at_most" in rule:
 		return column.le(rule["at_most"]).fillna(False)
@@ -223,6 +223,8 @@ def pre_expiry_features(config: dict, features: pd.DataFrame) -> pd.DataFrame:
 	rebuilt["roll_flag"] = rebuilt.index.isin(rolls["roll_date"])
 	rebuilt["complete"] = prices["complete"]
 	rebuilt["paper_sample"] = rebuilt["complete"] & ~rebuilt["early_close"] & ~rebuilt["low_volume"]
+	# sessions_to_expiry is the paper rule's: it is wrong on the dates where this rule holds the next
+	# contract. Nothing in this variant uses it; recompute it before filtering on it here.
 	expiry = features.set_index("trade_date")["sessions_to_expiry"]
 	start_date, end_date = pd.Timestamp(returns["sample"]["start"]), returns["sample"].get("end")
 	return build_features(rebuilt.reset_index(), expiry, returns["returns"], start_date, pd.Timestamp(end_date) if end_date else None, False)
@@ -345,6 +347,8 @@ def figure_oos(forecasts: pd.DataFrame, path: Path) -> None:
 
 
 def main() -> int:
+	# Set here rather than at import, so notebooks that import this module keep inline figures.
+	matplotlib.use("Agg")
 	args = parse_args()
 	config = load_config(args.config)
 	tables_dir, figures_dir = Path(config["tables_dir"]), Path(config["figures_dir"])
