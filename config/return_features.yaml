@@ -1,0 +1,41 @@
+# Settings for src/build_return_features.py: the return variables of Baltussen, Da, Lammers & Martens
+# (2021) for the 2021-2026 CL replication (#28), built from the minute pipeline's reference prices (#27).
+
+reference_prices: data/processed/cl_minute_reference_prices.parquet
+session_quality: data/processed/cl_minute_session_quality.csv
+output_dir: data/processed
+
+sample:
+  # Trade dates in [start, end] that pass the paper filters (`paper_sample`) form the regression sample.
+  # end: null keeps every date up to the last one in the reference prices.
+  start: "2021-01-01"
+  end: null
+
+returns:
+  # name: [start price, end price]. Simple returns P_end / P_start - 1, all Chicago time. p_prev_1330 is
+  # the previous trade date's 13:30 reference close; every price is the contract held on the trade date.
+  "on": [p_prev_1330, p_0800]   # overnight (quoted: YAML reads a bare on as true)
+  fh: [p_0800, p_0830]          # first half hour
+  onfh: [p_prev_1330, p_0830]   # paper's opening predictor: overnight plus first half hour
+  m: [p_0830, p_1230]           # middle of the day
+  slh: [p_1230, p_1300]         # second-to-last half hour
+  rod: [p_prev_1330, p_1300]    # paper's rest-of-day predictor
+  day: [p_0800, p_1300]         # daytime only (new hypotheses, #31)
+  lh: [p_1300, p_1330]          # last half hour: the forecast target
+target: lh
+# Every predictor must end at or before this time on the trade date, so none uses a trade from the
+# target interval. The build stops with an error otherwise.
+decision_time: "13:00"
+
+# Log versions (log_*) for the additive ON + DAY decomposition. The paper's regressions use simple returns.
+log_returns: true
+# Log-return identities checked on the sample: each total equals the sum of its parts.
+log_identities:
+  - [rod, ["on", day]]
+  - [rod, [onfh, m, slh]]
+  - [onfh, ["on", fh]]
+
+oos:
+  # The paper's minimum initial estimation window. Reported here so #29 starts its expanding-window
+  # forecasts from the same observation.
+  min_train_obs: 500
