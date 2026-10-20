@@ -111,7 +111,18 @@ Specific issue owners and reviewers are to be confirmed by the team for the **re
 
 The existing `config/`, `data/`, `src/`, `analysis/`, `tests/` and `reports/` folders may be reused. New return-feature, regression, volatility and evaluation modules should be kept **separate from prior moving-average code**, and named/configured according to this study rather than the retired strategy.
 
-All sample periods, data filters, contract roll rules, session/reference times, return conventions, regression specifications, OOS rules and trading-cost assumptions must be recorded in configuration files and the final methodology note. Existing `src/download_data.py` and related routines should be inspected before reuse. Commands for new research modules will be documented once implemented and tested.
+All sample periods, data filters, contract roll rules, session/reference times, return conventions, regression specifications, OOS rules and trading-cost assumptions must be recorded in configuration files and the final methodology note. Existing `src/download_data.py` and related routines should be inspected before reuse. Commands for new research modules are documented here as they are implemented and tested.
+
+### Research modules
+
+Run from the repository root, after `git lfs pull` (the processed minute data is committed through Git LFS; no API key is needed).
+
+| Step | Command | Settings | Outputs |
+| --- | --- | --- | --- |
+| Minute dataset and reference prices (#25–#27) | `python -m src.prepare_minute_data --config config/prepare_minute.yaml` | `config/prepare_minute.yaml` | `data/processed/cl_minute_*`, `reports/minute_dataset_handoff.md` |
+| Closing-period strategy backtest (#30) | `python -m src.backtest_lh_strategy --config config/lh_strategy.yaml` | `config/lh_strategy.yaml` | `reports/tables/lh_strategy_*.csv`, `reports/figures/lh_strategy_*.png`, `reports/lh_strategy_results.md`, `analysis/05_lh_strategy_results.ipynb` |
+
+`python -m pytest` runs every check.
 
 ### Suggested four-week sequence
 
