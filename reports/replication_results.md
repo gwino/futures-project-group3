@@ -1,6 +1,6 @@
 # Replication Results: CL Intraday Momentum, 2021–2026 (#29)
 
-This note reports our replication of the crude oil (CL) results in Baltussen, Da, Lammers & Martens (2021), *Hedging Demand and Market Intraday Momentum*, on 2021–2026 data. It is a draft of the replication section of the final report. All numbers come from `python -m src.replicate_regressions --config config/replication.yaml`. The tables are in `reports/tables/replication_*.csv` and the figures in `reports/figures/replication_*.png`.
+This note reports our replication of the crude oil (CL) results in Baltussen, Da, Lammers & Martens (2021), *Hedging Demand and Market Intraday Momentum*, on 2021–2026 data. It is a draft of the replication section of the final report. All numbers come from `python -m src.replicate_regressions --config config/replication.yaml`. The tables are in `reports/tables/replication_*.csv` and the figures in `reports/figures/replication_*.png`. `analysis/04_replication_results.ipynb` collects the tables and figures in one place and adds the influence checks quoted below.
 
 ## What is being tested
 
@@ -79,7 +79,7 @@ The figure shows 252-day rolling estimates with 95% bands, calendar-year estimat
 The figure plots the running sum of (historical-mean squared error − model squared error). A rising line means the model is beating the historical mean.
 
 - **ONFH and ONFH + M + SLH** lose to the historical mean (OOS R² −0.42% and −1.49%), as they did in the paper (−0.48% and −1.77%).
-- **ROD** ends with a small positive OOS R² of 0.37%, but the Clark-West test does not reject the historical mean (t = 1.00, one-sided p = 0.16). The gain is concentrated in March 2026. A single day, 10 March 2026, contributes most of it: ROD was −15.4% and LH +4.6%, a reversal that the negative slope forecast correctly in sign. Without March 2026 the OOS R² is 0.20%.
+- **ROD** ends with a small positive OOS R² of 0.37%, but the Clark-West test does not reject the historical mean (t = 1.00, one-sided p = 0.16). The gain is concentrated in March 2026. A single day, 10 March 2026, contributes most of it: ROD was −15.4% and LH +4.6%, a reversal that the negative slope forecast correctly in sign. Without March 2026 the OOS R² is 0.20%. Without that single day it is −0.22%, so the positive value should not be read as evidence that ROD forecasts LH (see `analysis/04_replication_results.ipynb`, Section 4).
 - **First forecast date.** The ROD OOS R² depends on when forecasting starts: −0.02% from 2022, 0.37% from 2023, 0.49% from 2024 and 0.58% from 2025. The Clark-West p-value is between 0.16 and 0.28 in every case (`replication_oos_sensitivity.csv`).
 
 ### Robustness
