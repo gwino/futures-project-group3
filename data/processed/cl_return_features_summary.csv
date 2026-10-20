@@ -1,0 +1,21 @@
+check,value,note
+period_trade_dates,1448,2021-01-04 to 2026-10-07
+sample_trade_dates,1436,2021-01-04 to 2026-10-07
+excluded_trade_dates,12,2021-11-26 (missing p_1300; missing p_1330; early close); 2021-11-29 (missing p_prev_1330); 2022-11-25 (missing p_1300; missing p_1330; early close); 2022-11-28 (missing p_prev_1330); 2023-11-24 (missing p_1300; missing p_1330; early close); 2023-11-27 (missing p_prev_1330); 2024-11-29 (early close); 2024-12-24 (missing p_1300; missing p_1330; early close); 2024-12-26 (missing p_prev_1330); 2025-11-28 (early close); 2025-12-24 (missing p_1300; missing p_1330; early close); 2025-12-26 (missing p_prev_1330)
+sample_missing_returns,0,
+sample_roll_dates,69,kept: every return is within the contract held on its trade date
+sample_degraded_dates,12,"kept, flagged for robustness checks"
+sample_weekend_or_holiday_gaps,304,"1 days: 1132, 2 days: 6, 3 days: 255, 4 days: 43"
+predictors_end_by,13:00,target lh: p_1300 -> p_1330; checked when the config is loaded
+max_identity_error,2.8e-16,log rod = log on + log day
+max_identity_error,3.1e-16,log rod = log onfh + log m + log slh
+max_identity_error,2.9e-16,log onfh = log on + log fh
+first_oos_forecast,2023-01-04,after a 500-observation initial window ending 2023-01-03; 936 forecasts
+r_on_percent,"mean 0.1407, sd 1.9373","min -17.97, max 12.98"
+r_fh_percent,"mean -0.0055, sd 0.6110","min -3.63, max 3.23"
+r_onfh_percent,"mean 0.1347, sd 2.0075","min -17.47, max 12.48"
+r_m_percent,"mean 0.0077, sd 1.4491","min -11.60, max 6.27"
+r_slh_percent,"mean -0.0022, sd 0.3964","min -2.27, max 2.31"
+r_rod_percent,"mean 0.1395, sd 2.4795","min -15.53, max 13.13"
+r_day_percent,"mean 0.0006, sd 1.6603","min -10.43, max 9.89"
+r_lh_percent,"mean -0.0142, sd 0.4691","min -2.14, max 4.55"

@@ -223,3 +223,70 @@ python -m pytest                                                        # 16 tes
 - **Cross-check.** The 08:00, 13:00 and 13:30 prices match the closes of the existing 15-minute bars exactly, for the same contract, on every overlapping 2025–2026 session.
 - **Outliers.** A minute is flagged when its change exceeds 15 times the rolling median 1-minute change. 3,645 held-contract minutes are flagged, and 3,616 of them are matched by the next listed month in the same minute. Most fall at the 17:00 CT reopen, or are real shocks (June 2025, March and April 2026). Flags are reported, never removed.
 - **Fallback.** No fallback was needed, because the full overnight session was available. With endpoint prices alone, overnight returns could still be computed, but overnight realized volatility could not.
+
+## Return features for the replication (#28)
+
+`src/build_return_features.py` turns the reference prices into the paper's return variables, one row per trade date. Settings, including every return interval, are in `config/return_features.yaml`.
+
+```bash
+python -m src.build_return_features --config config/return_features.yaml
+python -m pytest
+```
+
+### Return variables
+
+All times are America/Chicago. Every price on trade date t comes from the contract held on t, including the previous 13:30 close, so no return crosses a roll. Returns are decimals (0.01 = 1%).
+
+| Variable | Interval (CT) | Simple return | Role |
+|---|---|---|---|
+| ON | previous 13:30 → 08:00 | `p_0800 / p_prev_1330 - 1` | predictor (new hypotheses) |
+| FH | 08:00 → 08:30 | `p_0830 / p_0800 - 1` | predictor |
+| ONFH | previous 13:30 → 08:30 | `p_0830 / p_prev_1330 - 1` | predictor (paper) |
+| M | 08:30 → 12:30 | `p_1230 / p_0830 - 1` | predictor (paper) |
+| SLH | 12:30 → 13:00 | `p_1300 / p_1230 - 1` | predictor (paper) |
+| ROD | previous 13:30 → 13:00 | `p_1300 / p_prev_1330 - 1` | predictor (paper) |
+| DAY | 08:00 → 13:00 | `p_1300 / p_0800 - 1` | predictor (new hypotheses) |
+| LH | 13:00 → 13:30 | `p_1330 / p_1300 - 1` | target |
+
+- **Simple and log returns.** `r_*` columns are simple returns, as in the paper's regressions. `log_*` columns are log returns, which add up exactly (log ON + log DAY = log ROD; the largest error in the sample is 3e-16). Simple returns compound instead: (1 + ON)(1 + DAY) = 1 + ROD.
+- **No look-ahead.** Every predictor ends by 13:00, and `p_1300` holds no trade from 13:00 on. The script rejects a config in which a predictor ends after `decision_time` or the target starts before it. A test checks that changing the 13:30 price leaves every predictor unchanged.
+
+### Sample
+
+`sample` is true for trade dates from 2021-01-01 that pass the paper filters (`paper_sample`): **1,436 trade dates, 2021-01-04 to 2026-10-07**. `obs` numbers them 1 to 1,436. With the paper's 500-observation initial window, the first out-of-sample forecast is on **2023-01-04** (936 forecasts).
+
+The 12 excluded trade dates and their reasons are in `exclusion_reason` and in the summary file: 8 early closes (around Thanksgiving and Christmas) and the 4 dates after a 12:45 CT early close, which have no previous 13:30 price.
+
+These dates stay in the sample, flagged for robustness checks in #29:
+
+- 69 roll dates (`roll_flag`)
+- 12 Databento degraded dates (`degraded_date`)
+- sessions close to expiry (`sessions_to_expiry`)
+- 304 dates whose overnight return spans a weekend or holiday (`gap_days` > 1)
+
+| Variable | Mean (%) | SD (%) |
+|---|---|---|
+| ON | 0.141 | 1.937 |
+| FH | −0.006 | 0.611 |
+| ONFH | 0.135 | 2.008 |
+| M | 0.008 | 1.449 |
+| SLH | −0.002 | 0.396 |
+| ROD | 0.140 | 2.480 |
+| DAY | 0.001 | 1.660 |
+| LH | −0.014 | 0.469 |
+
+### Files
+
+| File | Description |
+|---|---|
+| `processed/cl_return_features.parquet` | 1,448 trade dates from 2021-01-04. Columns: `trade_date`, `prev_trade_date`, `contract_id`, `weekday`, `gap_days`, the six reference prices, `r_*` and `log_*` for each variable, `sessions_to_expiry`, the session flags, `sample`, `obs`, `exclusion_reason`. Filter on `sample` for regressions. |
+| `processed/cl_return_features_columns.csv` | Column dictionary: type and meaning of every column, with each return's formula taken from the config. |
+| `processed/cl_return_features_summary.csv`, `processed/cl_return_features.manifest.json` | Checks and summary statistics; settings with input and output SHA256 hashes. |
+
+```python
+import pandas as pd
+
+features = pd.read_parquet("data/processed/cl_return_features.parquet")
+sample = features[features["sample"]]
+y, x = sample["r_lh"], sample[["r_onfh", "r_m", "r_slh"]]
+```

@@ -1,0 +1,39 @@
+column,dtype,meaning
+trade_date,datetime64[ns],CME trade date t (the session from 17:00 CT on the previous trade date to 16:00 CT on t)
+prev_trade_date,datetime64[ns],Previous trade date (Friday for a Monday; skips holidays)
+contract_id,object,"Contract held on t, e.g. CLK2022; every price and return on t uses it"
+weekday,int32,Day of week of t (0 = Monday)
+gap_days,int64,Calendar days from prev_trade_date to t (3 after a weekend); overnight returns span the gap
+p_prev_1330,float64,Held contract's price at previous 13:30 CT: close of the last 1-minute bar starting before that time
+p_0800,float64,Held contract's price at 08:00 CT: close of the last 1-minute bar starting before that time
+p_0830,float64,Held contract's price at 08:30 CT: close of the last 1-minute bar starting before that time
+p_1230,float64,Held contract's price at 12:30 CT: close of the last 1-minute bar starting before that time
+p_1300,float64,Held contract's price at 13:00 CT: close of the last 1-minute bar starting before that time
+p_1330,float64,Held contract's price at 13:30 CT: close of the last 1-minute bar starting before that time
+r_on,float64,"ON simple return (predictor), previous 13:30 -> 08:00 CT: p_0800 / p_prev_1330 - 1"
+r_fh,float64,"FH simple return (predictor), 08:00 -> 08:30 CT: p_0830 / p_0800 - 1"
+r_onfh,float64,"ONFH simple return (predictor), previous 13:30 -> 08:30 CT: p_0830 / p_prev_1330 - 1"
+r_m,float64,"M simple return (predictor), 08:30 -> 12:30 CT: p_1230 / p_0830 - 1"
+r_slh,float64,"SLH simple return (predictor), 12:30 -> 13:00 CT: p_1300 / p_1230 - 1"
+r_rod,float64,"ROD simple return (predictor), previous 13:30 -> 13:00 CT: p_1300 / p_prev_1330 - 1"
+r_day,float64,"DAY simple return (predictor), 08:00 -> 13:00 CT: p_1300 / p_0800 - 1"
+r_lh,float64,"LH simple return (target), 13:00 -> 13:30 CT: p_1330 / p_1300 - 1"
+log_on,float64,"ON log return (predictor), previous 13:30 -> 08:00 CT: log(p_0800 / p_prev_1330)"
+log_fh,float64,"FH log return (predictor), 08:00 -> 08:30 CT: log(p_0830 / p_0800)"
+log_onfh,float64,"ONFH log return (predictor), previous 13:30 -> 08:30 CT: log(p_0830 / p_prev_1330)"
+log_m,float64,"M log return (predictor), 08:30 -> 12:30 CT: log(p_1230 / p_0830)"
+log_slh,float64,"SLH log return (predictor), 12:30 -> 13:00 CT: log(p_1300 / p_1230)"
+log_rod,float64,"ROD log return (predictor), previous 13:30 -> 13:00 CT: log(p_1300 / p_prev_1330)"
+log_day,float64,"DAY log return (predictor), 08:00 -> 13:00 CT: log(p_1300 / p_0800)"
+log_lh,float64,"LH log return (target), 13:00 -> 13:30 CT: log(p_1330 / p_1300)"
+sessions_to_expiry,Int64,Trade dates from t to the held contract's last trade date
+roll_flag,bool,t is the first session in a new contract (paper volume-crossover rule)
+folded_holiday,bool,A weekend or holiday session was folded into t
+degraded_date,bool,"Databento flags data quality on t; kept, for robustness checks"
+early_close,bool,The market closed 30+ minutes before 16:00 CT on t
+low_volume,bool,Held-contract session volume under the paper's 100-contract minimum
+complete,bool,All reference prices exist on t
+paper_sample,bool,"complete, not an early close, and not low volume (paper filters)"
+sample,bool,In the regression sample: paper_sample and within the configured period
+obs,Int64,"Observation number within the sample (1, 2, ...); empty outside it"
+exclusion_reason,object,Why t is out of the sample; empty when it is in
