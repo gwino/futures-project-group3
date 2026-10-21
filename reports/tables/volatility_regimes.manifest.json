@@ -1,0 +1,163 @@
+{
+  "config": "config\\volatility_regimes.yaml",
+  "settings": {
+    "return_features": "data/processed/cl_return_features.parquet",
+    "volatility_features": "data/processed/cl_volatility_features.parquet",
+    "tables_dir": "reports/tables",
+    "figures_dir": "reports/figures",
+    "target": "r_lh",
+    "predictors": {
+      "on": "r_on",
+      "day": "r_day"
+    },
+    "benchmark": {
+      "rod": "r_rod"
+    },
+    "log_variant": {
+      "target": "log_lh",
+      "predictors": {
+        "on": "log_on",
+        "day": "log_day"
+      },
+      "benchmark": {
+        "rod": "log_rod"
+      }
+    },
+    "scale": 100,
+    "inference": {
+      "hac_lags": "auto",
+      "confidence": 0.95
+    },
+    "regimes": {
+      "combined_vol": {
+        "measure": "rv_rod"
+      },
+      "day_vol": {
+        "measure": "rv_day"
+      },
+      "overnight_vol": {
+        "measure": "rv_on"
+      },
+      "trailing_5d_vol": {
+        "measure": "rv_rod_5d"
+      }
+    },
+    "baseline_regime": "combined_vol",
+    "threshold": {
+      "method": "expanding",
+      "quantile": 0.75,
+      "min_history": 250
+    },
+    "threshold_sensitivity": {
+      "expanding_q90": {
+        "method": "expanding",
+        "quantile": 0.9,
+        "min_history": 250
+      },
+      "expanding_median": {
+        "method": "expanding",
+        "quantile": 0.5,
+        "min_history": 250
+      },
+      "training_500_q75": {
+        "method": "training",
+        "quantile": 0.75,
+        "train_obs": 500
+      }
+    },
+    "oos": {
+      "min_train_obs": 500
+    },
+    "robustness": {
+      "exclude_2026_03_10": {
+        "dates": [
+          "2026-03-10"
+        ]
+      },
+      "exclude_roll_dates": {
+        "column": "roll_flag"
+      },
+      "exclude_degraded_dates": {
+        "column": "degraded_date"
+      }
+    },
+    "family_level": 0.05
+  },
+  "hac_lags_used": 7,
+  "bonferroni_level": 0.00625,
+  "interaction_tests": 8,
+  "sample": {
+    "merged_observations": 1436,
+    "dates": "2021-01-04 to 2026-10-07",
+    "regression_observations": {
+      "combined_vol": 1186,
+      "day_vol": 1186,
+      "overnight_vol": 1186,
+      "trailing_5d_vol": 1186
+    }
+  },
+  "inputs": {
+    "return_features": {
+      "file": "data/processed/cl_return_features.parquet",
+      "sha256": "4665c6fd3430da5e291dc8c1e47073511c2faa6174d0b0c291e535bdc580fdab"
+    },
+    "volatility_features": {
+      "file": "data/processed/cl_volatility_features.parquet",
+      "sha256": "33874ce7e9ab2e687d311304f802b5ca8ca3900f8a683e60da4dd6ee5a5ee51a"
+    }
+  },
+  "outputs": {
+    "regressions": {
+      "file": "reports\\tables\\volatility_regimes_regressions.csv",
+      "sha256": "9ff98b5fcbcccd2e4b8a6ec54d7d8aa076957d315217846cbd12e3ea5b4f5c9e"
+    },
+    "slopes": {
+      "file": "reports\\tables\\volatility_regimes_slopes.csv",
+      "sha256": "c408b022d82db4fd3446d7890c01d23ab39208358c1f24a5553bb43b68b7c9ee"
+    },
+    "counts": {
+      "file": "reports\\tables\\volatility_regimes_counts.csv",
+      "sha256": "0715493a52ec958b48b549699477044d0dc77d443c086850c83cf687f88dae0e"
+    },
+    "oos": {
+      "file": "reports\\tables\\volatility_regimes_oos.csv",
+      "sha256": "8270b339642896ed7a17825ff7f0350616d728e72f0fd5fd29dfaf52df9555c5"
+    },
+    "oos_forecasts": {
+      "file": "reports\\tables\\volatility_regimes_oos_forecasts.csv",
+      "sha256": "1b6491c2ff9a6f86773e97965385f9a50ca52c660f84a60414e2ee1c865ec7ab"
+    },
+    "robustness": {
+      "file": "reports\\tables\\volatility_regimes_robustness.csv",
+      "sha256": "3eea56588e9f2a19a38ac41c02fcedfee93d19ded85407b4a8f1aba7070aade6"
+    },
+    "by_year": {
+      "file": "reports\\tables\\volatility_regimes_by_year.csv",
+      "sha256": "684f3fa68c3060ba3eba4dbf81b81ddf51b4a18104c5f828d8b95cd498d5eeac"
+    },
+    "labels": {
+      "file": "reports\\tables\\volatility_regimes_labels.csv",
+      "sha256": "a9511cddd48c84e2117b2e9a037752ae3056e0955635ebac298b8a3b398497ad"
+    },
+    "figure_measures": {
+      "file": "reports\\figures\\volatility_regimes_measures.png",
+      "sha256": "ac197d3468411768655004a7513d3fe522b150624e6cac90980dc47c4bbbda39"
+    },
+    "figure_slopes": {
+      "file": "reports\\figures\\volatility_regimes_slopes.png",
+      "sha256": "e0eb8a88db34d87d0b599adb17eb2679208aeefe1e57cd42db13a39876d22210"
+    },
+    "figure_by_year": {
+      "file": "reports\\figures\\volatility_regimes_by_year.png",
+      "sha256": "8a3b7d903a7b7b59c06ced57576db28b8d62443dba6c50c0fac67be65172212c"
+    },
+    "figure_oos": {
+      "file": "reports\\figures\\volatility_regimes_oos.png",
+      "sha256": "e2f12ef6c69a481895f6e73a7234b4a9b9d7000b01a99dd04b28f9910ea0a192"
+    }
+  },
+  "created_at_utc": "2026-10-21T00:41:34.733352+00:00",
+  "python": "3.11.9",
+  "pandas": "2.2.3",
+  "numpy": "2.1.3"
+}

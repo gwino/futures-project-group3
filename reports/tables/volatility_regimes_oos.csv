@@ -1,0 +1,17 @@
+regime,measure,model,n,oos_forecasts,oos_r2_pct,clark_west_t,clark_west_p,oos_r2_vs_base_pct,clark_west_t_vs_base,clark_west_p_vs_base
+combined_vol,rv_rod,base,1186,686,0.345315,0.934407,0.175047,,,
+combined_vol,rv_rod,interaction,1186,686,-0.604644,0.15667,0.437753,-0.95325,-0.930262,0.823882
+combined_vol,rv_rod,rod,1186,686,0.333306,0.855997,0.196,,,
+combined_vol,rv_rod,rod_interaction,1186,686,-0.437649,0.228298,0.409707,-0.773533,-1.11454,0.867476
+day_vol,rv_day,base,1186,686,0.345315,0.934407,0.175047,,,
+day_vol,rv_day,interaction,1186,686,-1.15133,-0.379245,0.647747,-1.50183,-1.75188,0.960103
+day_vol,rv_day,rod,1186,686,0.333306,0.855997,0.196,,,
+day_vol,rv_day,rod_interaction,1186,686,-0.897945,-0.241957,0.595593,-1.23537,-2.18943,0.985717
+overnight_vol,rv_on,base,1186,686,0.345315,0.934407,0.175047,,,
+overnight_vol,rv_on,interaction,1186,686,-0.899721,-0.0446016,0.517788,-1.24935,-0.678997,0.75143
+overnight_vol,rv_on,rod,1186,686,0.333306,0.855997,0.196,,,
+overnight_vol,rv_on,rod_interaction,1186,686,-0.60745,0.0385834,0.484611,-0.943902,-0.925226,0.822576
+trailing_5d_vol,rv_rod_5d,base,1186,686,0.345315,0.934407,0.175047,,,
+trailing_5d_vol,rv_rod_5d,interaction,1186,686,-1.19042,-0.252062,0.599503,-1.54106,-0.954827,0.830167
+trailing_5d_vol,rv_rod_5d,rod,1186,686,0.333306,0.855997,0.196,,,
+trailing_5d_vol,rv_rod_5d,rod_interaction,1186,686,-0.811353,-0.094921,0.537811,-1.14849,-1.16025,0.877027

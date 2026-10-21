@@ -111,7 +111,21 @@ Specific issue owners and reviewers are to be confirmed by the team for the **re
 
 The existing `config/`, `data/`, `src/`, `analysis/`, `tests/` and `reports/` folders may be reused. New return-feature, regression, volatility and evaluation modules should be kept **separate from prior moving-average code**, and named/configured according to this study rather than the retired strategy.
 
-All sample periods, data filters, contract roll rules, session/reference times, return conventions, regression specifications, OOS rules and trading-cost assumptions must be recorded in configuration files and the final methodology note. Existing `src/download_data.py` and related routines should be inspected before reuse. Commands for new research modules will be documented once implemented and tested.
+All sample periods, data filters, contract roll rules, session/reference times, return conventions, regression specifications, OOS rules and trading-cost assumptions must be recorded in configuration files and the final methodology note. Existing `src/download_data.py` and related routines should be inspected before reuse. Commands for new research modules are documented here as they are implemented and tested.
+
+### Research modules
+
+Run from the repository root, after `git lfs pull` (the processed minute data is committed through Git LFS; no API key is needed).
+
+| Step | Command | Settings | Outputs |
+| --- | --- | --- | --- |
+| Minute dataset and reference prices (#25–#27) | `python -m src.prepare_minute_data --config config/prepare_minute.yaml` | `config/prepare_minute.yaml` | `data/processed/cl_minute_*`, `reports/minute_dataset_handoff.md` |
+| Return features (#28) | `python -m src.build_return_features --config config/return_features.yaml` | `config/return_features.yaml` | `data/processed/cl_return_features*` |
+| Replication regressions (#29) | `python -m src.replicate_regressions --config config/replication.yaml` | `config/replication.yaml` | `reports/tables/replication_*`, `reports/replication_results.md`, `analysis/04_replication_results.ipynb` |
+| Realized-variance features (#32) | `python -m src.build_volatility_features --config config/volatility_features.yaml` | `config/volatility_features.yaml` | `data/processed/cl_volatility_features*` |
+| Volatility-regime tests (#32) | `python -m src.analyze_volatility_regimes --config config/volatility_regimes.yaml` | `config/volatility_regimes.yaml` | `reports/tables/volatility_regimes_*`, `reports/volatility_regimes_results.md`, `analysis/06_volatility_regimes_results.ipynb` |
+
+`python -m pytest` runs every check.
 
 ### Suggested four-week sequence
 

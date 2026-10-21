@@ -1,0 +1,63 @@
+# Settings for src/analyze_volatility_regimes.py: do high-volatility regimes change the predictive power of
+# overnight and daytime returns for the last half hour (#32)? Built on the return features (#28) and
+# the realized-variance features (#32).
+
+return_features: data/processed/cl_return_features.parquet
+volatility_features: data/processed/cl_volatility_features.parquet
+tables_dir: reports/tables
+figures_dir: reports/figures
+
+# Simple returns, as in the paper's regressions. The ON + DAY decomposition is the #31 model; ROD is the
+# paper's model. Every model has an intercept.
+target: r_lh
+predictors: {"on": r_on, day: r_day}   # quoted: YAML reads a bare on as true
+benchmark: {rod: r_rod}
+# Log-return version (an exactly additive ON + DAY decomposition), reported as a labeled robustness variant.
+log_variant: {target: log_lh, predictors: {"on": log_on, day: log_day}, benchmark: {rod: log_rod}}
+# Slopes, standard errors, adjusted R2 and OOS R2 are reported multiplied by 100, as in the paper.
+scale: 100
+
+inference:
+  # Newey-West standard errors with the n / (n - k) correction, as in #29; "auto" is floor(4 (n / 100)^(2/9)).
+  hac_lags: auto
+  confidence: 0.95
+
+regimes:
+  # name: the realized-variance measure that defines the regime. Every measure ends by 13:00 CT on the
+  # trade date (previous 13:30 -> 13:00 for rv_rod and the trailing mean, previous 13:30 -> 08:00 for
+  # rv_on, 08:00 -> 13:00 for rv_day), so the regime is known at the decision time.
+  combined_vol: {measure: rv_rod}
+  day_vol: {measure: rv_day}
+  overnight_vol: {measure: rv_on}
+  trailing_5d_vol: {measure: rv_rod_5d}
+baseline_regime: combined_vol
+
+threshold:
+  # High volatility on t: the measure on t exceeds the quantile of the measure over the trade dates
+  # strictly before t (expanding). The label is missing until min_history earlier dates exist, so the
+  # first min_history sample dates are not in the regressions. Nothing after t enters the label.
+  method: expanding
+  quantile: 0.75
+  min_history: 250
+threshold_sensitivity:
+  expanding_q90: {method: expanding, quantile: 0.90, min_history: 250}
+  expanding_median: {method: expanding, quantile: 0.50, min_history: 250}
+  # Fixed threshold from the first train_obs sample dates (the paper's minimum estimation window), so
+  # every date has a label; the first train_obs labels use their own dates' data.
+  training_500_q75: {method: training, quantile: 0.75, train_obs: 500}
+
+oos:
+  # Expanding-window forecasts after the paper's minimum of 500 observations, as in #29. Each
+  # interaction model is compared with the historical mean (Eq. 8) and with the model it nests
+  # (Clark-West, Eq. 9), using the regime labels known at each date.
+  min_train_obs: 500
+
+robustness:
+  # Each variant re-estimates every regime's models without the dates that match its rule.
+  exclude_2026_03_10: {dates: ["2026-03-10"]}
+  exclude_roll_dates: {column: roll_flag}
+  exclude_degraded_dates: {column: degraded_date}
+
+# Multiple testing: the interaction tests are counted as the number of regime definitions times the
+# number of interaction terms; the Bonferroni level is reported next to each p-value.
+family_level: 0.05
