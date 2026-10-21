@@ -1,0 +1,82 @@
+{
+  "config": "config\\volatility_features.yaml",
+  "settings": {
+    "reference_prices": "data/processed/cl_minute_reference_prices.parquet",
+    "front_minutes": "data/processed/cl_minute_front_contracts.parquet",
+    "session_quality": "data/processed/cl_minute_session_quality.csv",
+    "minute_config": "config/prepare_minute.yaml",
+    "output_dir": "data/processed",
+    "sample": {
+      "start": "2021-01-01",
+      "end": null
+    },
+    "windows": {
+      "on": [
+        "prev_13:30",
+        "08:00"
+      ],
+      "day": [
+        "08:00",
+        "13:00"
+      ]
+    },
+    "decision_time": "13:00",
+    "returns": {
+      "halt_gap_minutes": 60
+    },
+    "trailing": {
+      "days": 5
+    }
+  },
+  "minute_settings": {
+    "session": {
+      "timezone": "America/Chicago",
+      "open_time": "17:00",
+      "close_time": "16:00",
+      "early_close_minutes": 30
+    },
+    "reference": {
+      "previous_close": "13:30",
+      "points": [
+        "08:00",
+        "08:30",
+        "12:30",
+        "13:00",
+        "13:30"
+      ],
+      "max_stale_minutes": 5
+    }
+  },
+  "inputs": {
+    "reference_prices": {
+      "file": "data/processed/cl_minute_reference_prices.parquet",
+      "sha256": "f7ff50da8f6470c90a46a69956d747b343bf78091e7b3bd0a6ccbbb055aff8c5"
+    },
+    "front_minutes": {
+      "file": "data/processed/cl_minute_front_contracts.parquet",
+      "sha256": "c124ee2ed5ea14fd6fc9bc3e6d4c122e4ead90528efc28bb5949b8ad9ed2d95d"
+    },
+    "session_quality": {
+      "file": "data/processed/cl_minute_session_quality.csv",
+      "sha256": "9bd2c837bdf69ed82d048b0d567e8d8af48119ceb1d70c458e00adba8a5b5c3c"
+    }
+  },
+  "outputs": {
+    "features": {
+      "file": "data\\processed\\cl_volatility_features.parquet",
+      "sha256": "33874ce7e9ab2e687d311304f802b5ca8ca3900f8a683e60da4dd6ee5a5ee51a"
+    },
+    "columns": {
+      "file": "data\\processed\\cl_volatility_features_columns.csv",
+      "sha256": "bd4b2057de121153923352d16841640d53b24d4bf6b150aa084f925036d7a224"
+    },
+    "summary": {
+      "file": "data\\processed\\cl_volatility_features_summary.csv",
+      "sha256": "b21b22d333c72daf4b55d2d92372c70d1a3a5ea381fa298b114ddacfc554c26e"
+    }
+  },
+  "created_at_utc": "2026-10-21T00:37:15.106875+00:00",
+  "python": "3.11.9",
+  "pandas": "2.2.3",
+  "numpy": "2.1.3"
+}

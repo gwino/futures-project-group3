@@ -290,3 +290,35 @@ features = pd.read_parquet("data/processed/cl_return_features.parquet")
 sample = features[features["sample"]]
 y, x = sample["r_lh"], sample[["r_onfh", "r_m", "r_slh"]]
 ```
+
+## Realized-variance features for the volatility regimes (#32)
+
+`src/build_volatility_features.py` computes the overnight and daytime realized variance of the held contract from the 1-minute bars, one row per trade date. Settings are in `config/volatility_features.yaml`.
+
+```bash
+python -m src.build_volatility_features --config config/volatility_features.yaml
+python -m pytest
+```
+
+### Windows and rules
+
+| Variable | Window (CT) | Rule |
+|---|---|---|
+| `rv_on` | previous 13:30 → 08:00 | Sum of squared 1-minute log close-to-close returns of the contract held on t, including its bars on the previous trade date |
+| `rv_day` | 08:00 → 13:00 | Same, up to the decision time; nothing from 13:00 on enters any feature |
+| `rv_rod` | previous 13:30 → 13:00 | `rv_on + rv_day` |
+| `rv_rod_5d` | last 5 trade dates | Mean of `rv_rod` over t−4 … t |
+| `vol_*_pct` | | `sqrt(rv_*) × 100`, realized volatility in percent per window |
+
+- **Paths.** A window's path runs from the bar starting a minute before the window start (its close is the reference price at the start) to the bar starting a minute before the end, so the first and last closes equal the reference prices of #27 (`endpoints_match_*`; true on all 1,436 sample dates).
+- **Reopening jumps.** A return across a gap of 60 minutes or more spans a scheduled halt: the 16:00–17:00 CT daily halt, a weekend, or a holiday. It is left out of `rv_*` and recorded in `jumps_*` (count) and `jump_var_*` (sum of squares). Every overnight path has one, and the 35 paths with a folded holiday session have two; the daytime paths have none. `rv_rod_with_jumps` adds them back. Returns across shorter no-trade gaps are kept; the longest kept gap in the sample is 11 minutes (`max_gap_*`).
+- **Coverage.** `overnight_missing_minutes` and `window_missing_minutes` (from the session quality file) count minutes in which another outright traded but the held contract did not; 53 sample dates have more than 30 such overnight minutes. Those minutes carry no return, so the variance on those dates is slightly understated.
+- **Sample.** `sample` is `paper_sample` with both paths present: 1,436 trade dates from 2021-01-04, the same as the return features.
+
+### Files
+
+| File | Description |
+|---|---|
+| `processed/cl_volatility_features.parquet` | 1,448 trade dates from 2021-01-04. Columns: `trade_date`, `prev_trade_date`, `contract_id`; per window `rv_*`, `n_*` (returns), `max_gap_*`, `jumps_*`, `jump_var_*`, `bars_*`, `first_close_*`, `last_close_*`, `first_bar_*`, `last_bar_*`, `start_price_*`, `end_price_*`, `endpoints_match_*`, `vol_*_pct`; `rv_rod`, `rv_rod_with_jumps`, `rv_rod_5d`, `vol_rod_pct`; coverage columns; the session flags; `sample`. Join to the return features on `trade_date`. |
+| `processed/cl_volatility_features_columns.csv` | Column dictionary. |
+| `processed/cl_volatility_features_summary.csv`, `processed/cl_volatility_features.manifest.json` | Checks (paths, endpoint matches, jumps, gaps, volatility quantiles); settings with input and output SHA256 hashes. |

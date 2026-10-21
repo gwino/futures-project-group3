@@ -1,0 +1,39 @@
+# Settings for src/build_volatility_features.py: overnight and daytime realized variance of the held CL
+# contract from 1-minute bars, known by 13:00 CT on each trade date (#32).
+
+reference_prices: data/processed/cl_minute_reference_prices.parquet
+front_minutes: data/processed/cl_minute_front_contracts.parquet
+session_quality: data/processed/cl_minute_session_quality.csv
+# Time zone and reference times are shared with the minute pipeline (#27).
+minute_config: config/prepare_minute.yaml
+output_dir: data/processed
+
+sample:
+  # Features are built for every trade date in [start, end]; `sample` marks the paper-filter dates.
+  start: "2021-01-01"
+  end: null
+
+windows:
+  # name: [start, end] in Chicago time. "prev_HH:MM" is on the previous trade date. The path from the
+  # price at start to the price at end uses the 1-minute bars of the contract held on the trade date,
+  # including that contract's bars on the previous trade date, so a roll never enters a path. The
+  # first bar is the one that starts a minute before start (its close is the price at start) and the
+  # last bar the one that starts a minute before end, so the endpoints equal the reference prices.
+  "on": ["prev_13:30", "08:00"]   # overnight (quoted: YAML reads a bare on as true)
+  day: ["08:00", "13:00"]         # daytime, up to the decision time
+# Every window must end at or before this time on the trade date, so no feature uses a trade from the
+# target interval (13:00-13:30 CT). The build stops with an error otherwise.
+decision_time: "13:00"
+
+returns:
+  # Realized variance is the sum of squared 1-minute log close-to-close returns within the window.
+  # A return whose bars are at least halt_gap_minutes apart spans a scheduled halt (the 16:00-17:00 CT
+  # daily halt, a weekend or a holiday); it is a reopening jump, left out of the variance and recorded
+  # separately in jumps_* and jump_var_*. Shorter gaps are minutes without a trade: the return across
+  # them is a real price change and stays in the sum.
+  halt_gap_minutes: 60
+
+trailing:
+  # Trailing mean of the combined (overnight + daytime) realized variance over this many trade dates,
+  # including the current one; it ends at 13:00 CT on the trade date, so it is known at the decision.
+  days: 5
