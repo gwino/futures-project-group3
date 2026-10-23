@@ -16,4 +16,3 @@ jump_share_day,0.000,share of the window's total squared returns that sits in th
 max_gap_day,"{1.0: 1428, 2.0: 8}","longest kept gap (minutes) per path: count of paths, largest five"
 vol_day_pct,"median 1.370, p90 2.218, max 6.825","realized volatility per window, percent"
 corr_rv_on_rv_day,0.733,correlation of overnight and daytime realized variance across sample dates
-corr_log_rv_rod_abs_lh,n/a,"left to the regime analysis (#32), which uses the target"

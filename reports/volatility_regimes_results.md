@@ -100,7 +100,7 @@ ON and DAY differences (high − low, × 100) for the combined-RV regime:
 | Without roll dates | −1.13 (1.91) | −2.45 (3.01) | 0.68 |
 | Without degraded dates | −1.21 (1.85) | −2.05 (2.94) | 0.71 |
 
-The other three regime measures give the same pattern under every variant (full table in the CSV). Across the 28 variant-by-regime Wald tests the smallest p-value is 0.53.
+The other three regime measures give the same pattern under every variant (full table in the CSV). Across the 28 variant-by-regime Wald tests of the ON + DAY interactions the smallest p-value is 0.53; for the ROD interaction it is 0.48 (without degraded dates, combined-RV regime).
 
 ### By year (`volatility_regimes_by_year.csv`)
 
@@ -120,7 +120,7 @@ For the combined-RV regime, the high-regime DAY slope is +9.4 (2.3) in 2025 on 2
 - **Short regime history.** Most high-volatility dates are in 2022 and 2026; 2023 and 2024 have about a dozen each. A regime effect that only shows in crises cannot be separated from those two episodes.
 - **Overnight coverage.** The held contract has no trade in some overnight minutes (53 dates with more than 30 such minutes); the variance on those dates is slightly understated. The reopening jumps are excluded by rule and reported separately; including them (`rv_rod_with_jumps`) is a one-line config change for a robustness run.
 - **No implied volatility.** Realized variance up to 13:00 CT is the only volatility measure; an options-implied measure might classify regimes differently.
-- **Multiple tests.** Eight interaction tests in the baseline and 28 Wald tests in the robustness table; nothing approaches the Bonferroni level.
+- **Multiple tests.** Eight interaction tests in the baseline and 28 Wald tests per predictor set in the robustness table (ON + DAY, and ROD); nothing approaches the Bonferroni level.
 
 ## Points for review
 

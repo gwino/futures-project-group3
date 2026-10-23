@@ -72,10 +72,10 @@
     },
     "summary": {
       "file": "data\\processed\\cl_volatility_features_summary.csv",
-      "sha256": "b21b22d333c72daf4b55d2d92372c70d1a3a5ea381fa298b114ddacfc554c26e"
+      "sha256": "80c08c96590b71f48710b696a36648282d20a15a412c4b0f5cee75bea65d3584"
     }
   },
-  "created_at_utc": "2026-10-21T00:37:15.106875+00:00",
+  "created_at_utc": "2026-10-23T17:10:08.983297+00:00",
   "python": "3.11.9",
   "pandas": "2.2.3",
   "numpy": "2.1.3"
