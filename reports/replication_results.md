@@ -121,7 +121,7 @@ Each period keeps the same rolls, return definitions and filters. We re-estimate
 
 To test whether a slope changed, we fit one pooled regression over the whole sample: LH = α + δ·D + β·x + γ·x·D + ε, where D = 1 in 2024–2026. Here γ is the change in the slope from the first period to the second, and its Newey-West standard error comes from the pooled regression. A Wald test checks whether all of a model's slopes changed together. So a slope that is significant in one period and not in the other is never read as a difference by itself.
 
-All tables use the common 7 lags of #29. Each subperiod's own automatic lag length is 6, and with 6 lags the standard errors move by at most 3.1%. Every number below, for both lag rules and all four samples, is in three files:
+All tables use the common 7 lags of #29. Each subperiod's own automatic lag length is 6, and with 6 lags the subperiod standard errors move by at most 3.1%. The pooled change tests use 1,244 to 1,436 dates, for which the automatic rule also gives 7. They are therefore identical under both rules, are not a separate lag check, and are reported once (labeled `common_7=auto_n`). Every number below, for both lag rules and all four samples, is in three files:
 
 - `replication_subperiods.csv`: coefficients;
 - `replication_subperiod_fit.csv`: model fit and out-of-sample results;
@@ -142,7 +142,7 @@ All tables use the common 7 lags of #29. Each subperiod's own automatic lag leng
 
 **Model fit and overall significance.** The Wald test asks whether all of a model's slopes are zero, using the HAC covariance; with one slope it equals t². R² and adjusted R² are in percent, and LH's daily standard deviation is 0.49% in 2021–2023 and 0.44% in 2024–2026.
 
-The out-of-sample columns split the 936 expanding-window forecasts of #29 by forecast date. These forecasts are fitted from 2021 on, with the first one on 4 January 2023. So the 2021–2023 column covers only 2023 (247 forecasts). The Clark-West p-value is one-sided.
+The out-of-sample columns do **not** come from models trained separately on each subperiod. There is one expanding window, as in #29: every forecast is fitted on all sample dates before it, starting from 4 January 2021, and the first forecast is on 4 January 2023. The columns split those same 936 forecasts by forecast date. So the 2021–2023 row covers only 2023 (247 forecasts), and the 2024–2026 forecasts are also trained on 2021–2023 data. The Clark-West p-value is one-sided.
 
 | Model | Period | n | R² | Adj. R² | Wald χ² (df), p | OOS forecasts | OOS R² | Clark-West t (p) |
 |---|---|---|---|---|---|---|---|---|
@@ -176,7 +176,7 @@ For comparison, the paper's CL values (1987–2020) are:
 
 ![Slopes by subperiod](figures/replication_subperiods.png)
 
-- **No slope changes, and no model is significant in either period.** Every slope interval contains zero in both periods. No model's joint Wald test rejects "all slopes are zero" in either period (smallest p = 0.17). The change in each ONFH and ROD slope is under 0.7 of its standard error.
+- **No statistically significant evidence of slope changes, and no model is significant in either period.** Every slope interval contains zero in both periods. No model's joint Wald test rejects "all slopes are zero" in either period (smallest p = 0.17). The change in each ONFH and ROD slope is under 0.7 of its standard error.
 - **Fit stays small.** Adjusted R² is at most 0.4% in 2021–2023. It reaches 1.3% (ROD) and 3.0% (ONFH + M + SLH) in 2024–2026, but the 2024–2026 values depend on 10 March 2026 (see below). Out of sample, no model beats the historical mean significantly in either period: the smallest one-sided Clark-West p-value is 0.17.
 - **The only borderline slope result is M, and it is not robust.** In the three-predictor model, the M slope falls by 6.71 (p = 0.051). That fall depends on 2026:
 
@@ -194,7 +194,10 @@ For comparison, the paper's CL values (1987–2020) are:
 - **10 March 2026 drives the 2024–2026 ROD estimate and fit.** Without that day:
   - the 2024–2026 ROD slope is −0.54 [−2.21, 1.14], close to 2021–2023's −0.79;
   - the change is +0.25 (1.31), p = 0.85;
-  - adjusted R² falls from 1.32% to −0.04%, and OOS R² from +0.49% to −0.09%.
+  - adjusted R² falls from 1.32% to −0.04%;
+  - as an ex-post influence check, not forecast performance, the 2024–2026 OOS R² falls from +0.49% to −0.09%.
+
+  In `replication_subperiod_fit.csv`, the OOS results of the variants without 10 March 2026 and without the 1% largest |ROD| days are labeled `ex_post_sensitivity`. Their excluded dates were chosen with hindsight, and the extreme-ROD threshold uses the full sample. Only the baseline and the without-2026 variant are prospective: dropping 2026 only shortens the evaluation, and its 2024–2025 forecasts are the baseline's.
 
   Without all of 2026, the 2024–2025 ROD slope is +0.19, and the change is +0.97 (1.41), p = 0.49.
 - **Against the full sample and the paper.** Both subperiod ROD intervals contain the full-sample estimate (−1.46) and the paper's (0.67). Both periods agree with the paper's conclusion for CL: no significant rest-of-day effect, and a negative or near-zero OOS R².
@@ -230,7 +233,7 @@ The signs match Bogoev's, but neither slope is significant (`replication_subperi
 
 ## Conclusion
 
-In 2021–2026 we find **no evidence of intraday momentum in CL**. The slopes are small and slightly negative, every confidence interval includes zero, and only the ROD model beats the historical mean out of sample. That small gain is not statistically distinguishable from zero, and it turns negative without 10 March 2026. That day also accounts for more than half of the negative full-sample ROD slope. This agrees with the paper's own CL result, which was not significant either. In the new hypotheses (#31–#33), the questions are therefore whether the overnight and daytime parts of ROD predict differently, and whether the reversal seen on extreme days is a volatility-regime effect (#32), rather than whether CL momentum exists. Splitting the sample into 2021–2023 and 2024–2026 does not change this: no slope changes significantly between the periods, and the more negative 2024–2026 ROD estimate comes from 10 March 2026 (#38).
+In 2021–2026 we find **no evidence of intraday momentum in CL**. The slopes are small and slightly negative, every confidence interval includes zero, and only the ROD model beats the historical mean out of sample. That small gain is not statistically distinguishable from zero, and it turns negative without 10 March 2026. That day also accounts for more than half of the negative full-sample ROD slope. This agrees with the paper's own CL result, which was not significant either. In the new hypotheses (#31–#33), the questions are therefore whether the overnight and daytime parts of ROD predict differently, and whether the reversal seen on extreme days is a volatility-regime effect (#32), rather than whether CL momentum exists. Splitting the sample into 2021–2023 and 2024–2026 does not change this: there is no statistically significant evidence that any slope changed between the periods, and the more negative 2024–2026 ROD estimate comes from 10 March 2026 (#38).
 
 ## Reproducing
 

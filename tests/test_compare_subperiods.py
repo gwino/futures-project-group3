@@ -60,6 +60,9 @@ def test_variants_and_lag_rules():
 	assert variant_mask(frame, {}).tolist() == [False, False, False]
 	assert variant_mask(frame, {"on_or_after": "2026-01-01"}).tolist() == [False, True, True]
 	assert variant_mask(frame, {"dates": ["2026-03-10"]}).tolist() == [False, False, True]
+	# The oos label selects nothing.
+	assert variant_mask(frame, {"oos": "prospective"}).tolist() == [False, False, False]
+	assert variant_mask(frame, {"dates": ["2026-03-10"], "oos": "ex_post_sensitivity"}).tolist() == [False, False, True]
 	assert (lag_length("common_7", 747, 7), lag_length("auto_n", 747, 7), lag_length("auto_n", 1436, 7)) == (7, 6, 7)
 
 

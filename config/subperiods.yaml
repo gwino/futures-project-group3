@@ -16,16 +16,20 @@ periods:
 lags:
   # common_7: the full-sample automatic lag length of #29, used in every regression so that standard
   # errors are comparable across periods. auto_n: floor(4 (n / 100)^(2/9)) with each regression's own n
-  # (6 for each subperiod), reported as a labeled alternative.
+  # (6 for each subperiod), reported as a labeled alternative. The pooled difference tests use 1,244 to
+  # 1,436 dates, for which auto_n is also 7, so they are identical under both rules and run once.
   common: 7
 
 variants:
   # Sensitivity of the subperiod comparison to the 2026 extremes. Each variant drops the sample dates
-  # that match its rule before splitting: a list of dates, |column| above a full-sample quantile (that
-  # threshold uses the whole sample, so it is an in-sample check only), or every date on or after a day.
+  # that match its rule before splitting: a list of dates, |column| above a full-sample quantile, or
+  # every date on or after a day. `oos` says how the variant's out-of-sample results may be read:
+  # prospective (no date was chosen with hindsight; dropping 2026 only truncates the evaluation, and the
+  # 2024-2025 forecasts equal the baseline's) or ex_post_sensitivity (dates chosen after seeing the data,
+  # an influence check rather than forecast performance). Default: prospective.
   baseline: {}
-  exclude_2026_03_10: {dates: ["2026-03-10"]}
-  exclude_extreme_rod: {column: r_rod, abs_quantile_above: 0.99}
+  exclude_2026_03_10: {dates: ["2026-03-10"], oos: ex_post_sensitivity}
+  exclude_extreme_rod: {column: r_rod, abs_quantile_above: 0.99, oos: ex_post_sensitivity}
   exclude_2026: {on_or_after: "2026-01-01"}
 
 bogoev:

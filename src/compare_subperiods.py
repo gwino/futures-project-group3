@@ -16,8 +16,13 @@ Outputs (tables in reports/tables, the figure in reports/figures):
   and 2026 exclusions) and lag rule (common 7 lags, and each regression's own automatic lag).
 - replication_subperiod_fit.csv: one row per model and period: R2, adjusted R2, the HAC Wald test that
   all slopes are zero, residual and target standard deviations, and the out-of-sample R2 and
-  Clark-West test of the #29 expanding-window forecasts that fall in that period.
-- replication_subperiod_differences.csv: the pooled tests of the 2024-2026 minus 2021-2023 slope change.
+  Clark-West test of the #29 expanding-window forecasts that fall in that period. The forecasts come
+  from one expanding window over the whole sample, split by forecast date; no period is trained on
+  its own. `oos_interpretation` marks the OOS results of variants whose excluded dates were chosen
+  after the fact (ex_post_sensitivity) as influence checks, not prospective forecast performance.
+- replication_subperiod_differences.csv: the pooled tests of the 2024-2026 minus 2021-2023 change. When
+  both lag rules give the same lag length for the pooled sample (7 for every variant here), the test
+  is run once and labeled common_7=auto_n.
 - replication_subperiods_bogoev.csv: Bogoev (2025) Table IA1's joint ONFH + ROD specification on the
   overlapping 2021-2023 window, next to the values reported there (context only, not a replication).
 - replication_subperiods.png and replication_subperiods.manifest.json.
@@ -110,7 +115,11 @@ def period_mask(sample: pd.DataFrame, period: dict) -> pd.Series:
 
 
 def variant_mask(sample: pd.DataFrame, rule: dict) -> pd.Series:
-	"""True for the dates a variant drops: the #29 exclusion rules, plus every date on or after a day."""
+	"""True for the dates a variant drops: the #29 exclusion rules, plus every date on or after a day.
+
+	The `oos` key only labels how the variant's out-of-sample results may be read; it selects nothing.
+	"""
+	rule = {key: value for key, value in rule.items() if key != "oos"}
 	if not rule:
 		return pd.Series(False, index=sample.index)
 	if "on_or_after" in rule:
@@ -287,6 +296,9 @@ def main() -> int:
 		sample = full[~drop].reset_index(drop=True)
 		parts = {"full": sample, earlier_name: sample[period_mask(sample, earlier)], later_name: sample[period_mask(sample, later)]}
 		forecasts = None
+		oos_label = rule.get("oos", "prospective")
+		pooled = sample[period_mask(sample, earlier) | period_mask(sample, later)].reset_index(drop=True)
+		pooled_lags = {lag_rule: lag_length(lag_rule, len(pooled), common) for lag_rule in ("common_7", "auto_n")}
 		for lag_rule in ("common_7", "auto_n"):
 			fit_rows = []
 			for period, rows in parts.items():
@@ -303,16 +315,20 @@ def main() -> int:
 				count = len(parts[period]) if period in parts else len(sample)
 				rows, forecasts = oos_by_period(sample, models, target, min_train, {period: spec}, lag_length(lag_rule, count, common), scale, forecasts)
 				oos += rows
-			oos = pd.DataFrame(oos)
+			oos = pd.DataFrame(oos).assign(
+				oos_interpretation=oos_label, oos_training=f"one expanding window from {sample['trade_date'].iloc[0].date()}, split by forecast date",
+			)
 			fits += pd.DataFrame(fit_rows).merge(oos, on=["model", "period"], how="left").to_dict("records")
-			pooled = sample[period_mask(sample, earlier) | period_mask(sample, later)].reset_index(drop=True)
 			indicator = period_mask(pooled, later)
 			if indicator.all() or not indicator.any():
 				continue
-			lags = lag_length(lag_rule, len(pooled), common)
+			# With equal lag lengths the two labels give the same pooled test, so it is run once.
+			if lag_rule == "auto_n" and pooled_lags["auto_n"] == pooled_lags["common_7"]:
+				continue
+			label = "common_7=auto_n" if pooled_lags["auto_n"] == pooled_lags["common_7"] else lag_rule
 			for model, predictors in models.items():
-				rows, wald = pooled_difference(pooled, indicator, predictors, target, lags, z, scale)
-				key = {"variant": variant, "lag_rule": lag_rule, "model": model, "earlier": earlier_name, "later": later_name}
+				rows, wald = pooled_difference(pooled, indicator, predictors, target, pooled_lags[lag_rule], z, scale)
+				key = {"variant": variant, "lag_rule": label, "model": model, "earlier": earlier_name, "later": later_name}
 				differences += [{**key, **row, "n": wald["n"], "n_later": wald["n_later"], "hac_lags": wald["hac_lags"], "wald_p": wald["wald_p"]} for row in rows]
 				walds.append({**key, **wald})
 	estimates = pd.DataFrame(estimates)
@@ -378,7 +394,7 @@ def main() -> int:
 		print(fits.loc[fits["variant"].eq("baseline") & fits["lag_rule"].eq("common_7"), fit_shown].to_string(index=False))
 		print("\nSlope change, 2024-2026 minus 2021-2023 (pooled regression, 7 lags):")
 		for variant in config["variants"]:
-			rows = differences[differences["variant"].eq(variant) & differences["lag_rule"].eq("common_7")]
+			rows = differences[differences["variant"].eq(variant) & differences["lag_rule"].str.startswith("common_7")]
 			print(f"\n{variant}:")
 			print(rows[tested].to_string(index=False))
 	print(f"\nSaved tables to {tables_dir}/, the figure to {outputs['figure']} and manifest to {manifest_path}")
