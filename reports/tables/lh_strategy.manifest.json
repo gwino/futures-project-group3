@@ -1,0 +1,210 @@
+{
+  "config": "config\\lh_strategy.yaml",
+  "settings": {
+    "reference_prices": "data/processed/cl_minute_reference_prices.parquet",
+    "front_minutes": "data/processed/cl_minute_front_contracts.parquet",
+    "session_quality": "data/processed/cl_minute_session_quality.csv",
+    "roll_comparison": "data/processed/cl_minute_roll_comparison.csv",
+    "minute_config": "config/prepare_minute.yaml",
+    "return_features": "data/processed/cl_return_features.parquet",
+    "tables_dir": "reports/tables",
+    "figures_dir": "reports/figures",
+    "sample": {
+      "start": "2021-01-01",
+      "end": null
+    },
+    "signals": {
+      "rod": {
+        "long_if_positive": [
+          "p_prev_1330",
+          "p_1300"
+        ]
+      },
+      "onfh": {
+        "long_if_positive": [
+          "p_prev_1330",
+          "p_0830"
+        ]
+      },
+      "onfh_rod_agree": {
+        "long_if_all_positive": [
+          [
+            "p_prev_1330",
+            "p_0830"
+          ],
+          [
+            "p_prev_1330",
+            "p_1300"
+          ]
+        ]
+      },
+      "always_long": {
+        "constant": 1
+      }
+    },
+    "baseline_signal": "rod",
+    "decision_time": "13:00",
+    "execution": {
+      "entry_time": "13:00",
+      "exit_time": "13:30",
+      "fill": "next_bar_open",
+      "max_delay_minutes": 5,
+      "settlement_proxy_minutes": 2,
+      "contracts": 1,
+      "multiplier": 1000,
+      "tick_size": 0.01
+    },
+    "execution_variants": {
+      "reference_prices": {
+        "entry": "reference",
+        "exit": "reference"
+      },
+      "next_bar_open": {
+        "entry": "next_bar_open",
+        "exit": "next_bar_open"
+      },
+      "exit_reference_close": {
+        "entry": "next_bar_open",
+        "exit": "reference"
+      },
+      "entry_one_minute_late": {
+        "entry": "next_bar_open",
+        "exit": "next_bar_open",
+        "entry_time": "13:01"
+      },
+      "exit_tas_zero_differential": {
+        "entry": "next_bar_open",
+        "exit": "settlement_proxy",
+        "exit_slippage_ticks_per_side": 0
+      },
+      "exit_tas_one_tick": {
+        "entry": "next_bar_open",
+        "exit": "settlement_proxy",
+        "exit_slippage_ticks_per_side": 1
+      }
+    },
+    "baseline_execution": "next_bar_open",
+    "costs": {
+      "commission_per_side_usd": 2.5,
+      "slippage_ticks_per_side": 0.5,
+      "sensitivity_ticks_per_side": [
+        0,
+        0.25,
+        0.5,
+        1,
+        1.5,
+        2,
+        3
+      ],
+      "sensitivity_commission_usd": [
+        0,
+        2.5,
+        5.0
+      ]
+    },
+    "roll_rules": {
+      "paper": {},
+      "pre_expiry_3": {
+        "roll_date_column": "roll_date_pre_expiry"
+      }
+    },
+    "blackouts": {
+      "all_days": {},
+      "skip_roll_dates": {
+        "column": "roll_flag"
+      },
+      "skip_expiry_adjacent": {
+        "column": "sessions_to_expiry",
+        "at_most": 3
+      },
+      "skip_degraded_dates": {
+        "column": "degraded_date"
+      },
+      "skip_after_non_trading_days": {
+        "column": "gap_days",
+        "above": 1
+      },
+      "skip_2026_03_10": {
+        "dates": [
+          "2026-03-10"
+        ]
+      }
+    },
+    "evaluation": {
+      "trading_days_per_year": 252,
+      "confidence": 0.95,
+      "hac_lags": "auto",
+      "rolling_window": 252,
+      "worst_days": 10,
+      "adverse_loss_usd": 500
+    }
+  },
+  "minute_settings": {
+    "session": {
+      "timezone": "America/Chicago",
+      "open_time": "17:00",
+      "close_time": "16:00",
+      "early_close_minutes": 30
+    },
+    "reference": {
+      "previous_close": "13:30",
+      "points": [
+        "08:00",
+        "08:30",
+        "12:30",
+        "13:00",
+        "13:30"
+      ],
+      "max_stale_minutes": 5
+    }
+  },
+  "checks": {
+    "sample_days": 1436,
+    "first_date": "2021-01-04",
+    "last_date": "2026-10-07",
+    "hac_lags_used": 7,
+    "return_features": "data\\processed\\cl_return_features.parquet",
+    "shared_dates": 1436,
+    "max_abs_rod_difference": 0.0,
+    "baseline_traded_days": 1435,
+    "baseline_skipped": {
+      "no position (signal zero or missing)": 1
+    },
+    "entry_delay_minutes": {
+      "0.0": 1436
+    },
+    "exit_delay_minutes": {
+      "0.0": 1436
+    },
+    "entry_after_decision": true,
+    "exit_after_entry": true,
+    "roll_rule_pre_expiry_3_days": 1436,
+    "roll_rule_pre_expiry_3_different_contract_days": 127
+  },
+  "inputs": {
+    "reference_prices": "f7ff50da8f6470c90a46a69956d747b343bf78091e7b3bd0a6ccbbb055aff8c5",
+    "front_minutes": "c124ee2ed5ea14fd6fc9bc3e6d4c122e4ead90528efc28bb5949b8ad9ed2d95d",
+    "session_quality": "9bd2c837bdf69ed82d048b0d567e8d8af48119ceb1d70c458e00adba8a5b5c3c",
+    "roll_comparison": "0730f7ca60e4c60d1a30aa423f1b483cee50b4d6c18aeb313a03d34b2a28b68c"
+  },
+  "outputs": {
+    "lh_strategy_trades.csv": "a83e6d0037c129f321657538bf0a195cfebf84de0cd9bccb12c833ecd52b4bb2",
+    "lh_strategy_summary.csv": "d1db6ee1ace573d105e9ede57e75ff1169bdaa4a382a1b6f6e4e43fd89510127",
+    "lh_strategy_cost_sensitivity.csv": "5a998c6c8e7f46309c6c170a6d8e642819ee0203deda73cec8894feec2185c78",
+    "lh_strategy_by_year.csv": "90694027f4f9bdcb7598cd4ace9b2c0b8f818d58dd6cd9a13641e4a1c96e682c",
+    "lh_strategy_roll_rules.csv": "90c09bf92c8bb4e63a6e49218dbe89512973094a3420e9d86d32784c21d16f09",
+    "lh_strategy_robustness.csv": "a0a0b631063f4629097d93d69d477de337df93a161d8a7a61a041cf4031cfd1b",
+    "lh_strategy_worst_days.csv": "dc1f871b390a7b01ec9ba8d769d007a3f2fa8e11cff4dc7c493550b21056a795",
+    "lh_strategy_rolling.csv": "c7a60ef169b50083c2fb55d14af999b797b00a712bc08fa4765f69ff025c43d9",
+    "lh_strategy_cumulative.png": "33a24e4d2f0147ffea23565038da9b123fe839bbac1299aba593c9e68289d521",
+    "lh_strategy_by_year.png": "1bbca369c361dd9e48d182d5f5f07fb60e39d826ddd1c1b1aba78f04e786aa98",
+    "lh_strategy_rolling.png": "6477b95b3de9ca1c2c6e6f02ca3a9dd4d6bf3948b528b68e339d76f91bb8c523",
+    "lh_strategy_cost_sensitivity.png": "30b5125fb0c59b5f67d0802f311c42d7102be81472fa92b0dc45d04d65832d06"
+  },
+  "run": {
+    "time_utc": "2026-10-23T17:01:27.384027+00:00",
+    "python": "3.11.9",
+    "pandas": "2.2.3",
+    "numpy": "2.1.3"
+  }
+}
