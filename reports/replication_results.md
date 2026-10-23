@@ -110,6 +110,113 @@ Each row re-estimates the ROD model (slope × 100, standard error in parentheses
 - **The roll rule barely matters.** Holding the next contract 1–2 sessions earlier, as the existing pre-expiry rule does, changes the contract on 127 days but moves the ROD slope by only 0.03.
 - **Extreme days matter most, and one of them above all.** Dropping the 15 days with the largest ROD moves (8 in March–April 2026, 5 in March and July 2022, 1 in June 2025 and 1 in July 2026) halves the slope, to −0.76. Dropping only 10 March 2026 moves it further, to −0.67. The negative estimate is therefore driven largely by crisis-day reversals, and mostly by one of them. The March–April 2026 days all come from the same conflict, so we treat them as a volatility-regime question for #32, not as outliers to remove.
 
+### Subperiods: 2021–2023 against 2024–2026 (#38)
+
+**What is tested.** We split the regression sample into two nonoverlapping periods:
+
+- 2021–2023: 747 trade dates, 4 January 2021 to 29 December 2023;
+- 2024–2026: 689 trade dates, 2 January 2024 to 7 October 2026.
+
+Each period keeps the same rolls, return definitions and filters. We re-estimate the three models in each period.
+
+To test whether a slope changed, we fit one pooled regression over the whole sample: LH = α + δ·D + β·x + γ·x·D + ε, where D = 1 in 2024–2026. Here γ is the change in the slope from the first period to the second, and its Newey-West standard error comes from the pooled regression. A Wald test checks whether all of a model's slopes changed together. So a slope that is significant in one period and not in the other is never read as a difference by itself.
+
+All tables use the common 7 lags of #29. Each subperiod's own automatic lag length is 6, and with 6 lags the subperiod standard errors move by at most 3.1%. The pooled change tests use 1,244 to 1,436 dates, for which the automatic rule also gives 7. They are therefore identical under both rules, are not a separate lag check, and are reported once (labeled `common_7=auto_n`). Every number below, for both lag rules and all four samples, is in three files:
+
+- `replication_subperiods.csv`: coefficients;
+- `replication_subperiod_fit.csv`: model fit and out-of-sample results;
+- `replication_subperiod_differences.csv`: the change tests.
+
+**Coefficients.** Slopes × 100, intercepts in basis points, with Newey-West standard errors in parentheses and two-sided p-values.
+
+| Model | Coefficient | 2021–2023: estimate (SE) | t | p | 2024–2026: estimate (SE) | t | p |
+|---|---|---|---|---|---|---|---|
+| ONFH | intercept (bps) | −3.63 (1.56) | −2.33 | 0.02 | 1.37 (1.82) | 0.75 | 0.45 |
+| | ONFH | −1.94 (1.40) | −1.38 | 0.17 | −0.78 (1.30) | −0.60 | 0.55 |
+| ONFH + M + SLH | intercept (bps) | −3.68 (1.54) | −2.38 | 0.02 | 1.30 (1.79) | 0.73 | 0.47 |
+| | ONFH | −2.00 (1.41) | −1.42 | 0.16 | −0.90 (1.21) | −0.75 | 0.46 |
+| | M | 1.26 (1.25) | 1.01 | 0.31 | −5.45 (3.20) | −1.70 | 0.09 |
+| | SLH | −4.80 (5.53) | −0.87 | 0.38 | 3.03 (7.35) | 0.41 | 0.68 |
+| ROD | intercept (bps) | −3.77 (1.56) | −2.42 | 0.02 | 1.50 (1.83) | 0.82 | 0.41 |
+| | ROD | −0.79 (1.00) | −0.79 | 0.43 | −2.06 (1.58) | −1.31 | 0.19 |
+
+**Model fit and overall significance.** The Wald test asks whether all of a model's slopes are zero, using the HAC covariance; with one slope it equals t². R² and adjusted R² are in percent, and LH's daily standard deviation is 0.49% in 2021–2023 and 0.44% in 2024–2026.
+
+The out-of-sample columns do **not** come from models trained separately on each subperiod. There is one expanding window, as in #29: every forecast is fitted on all sample dates before it, starting from 4 January 2021, and the first forecast is on 4 January 2023. The columns split those same 936 forecasts by forecast date. So the 2021–2023 row covers only 2023 (247 forecasts), and the 2024–2026 forecasts are also trained on 2021–2023 data. The Clark-West p-value is one-sided.
+
+| Model | Period | n | R² | Adj. R² | Wald χ² (df), p | OOS forecasts | OOS R² | Clark-West t (p) |
+|---|---|---|---|---|---|---|---|---|
+| ONFH | 2021–2026 | 1,436 | 0.31 | 0.24 | 1.85 (1), 0.17 | 936 | −0.42 | 0.12 (0.45) |
+| | 2021–2023 | 747 | 0.52 | 0.39 | 1.92 (1), 0.17 | 247 | −0.57 | −0.10 (0.54) |
+| | 2024–2026 | 689 | 0.15 | 0.00 | 0.36 (1), 0.55 | 689 | −0.37 | 0.18 (0.43) |
+| ONFH + M + SLH | 2021–2026 | 1,436 | 0.67 | 0.46 | 2.63 (3), 0.45 | 936 | −1.49 | −0.99 (0.84) |
+| | 2021–2023 | 747 | 0.78 | 0.38 | 3.88 (3), 0.28 | 247 | −1.81 | −0.53 (0.70) |
+| | 2024–2026 | 689 | 3.39 | 2.96 | 3.29 (3), 0.35 | 689 | −1.38 | −0.83 (0.80) |
+| ROD | 2021–2026 | 1,436 | 0.59 | 0.52 | 2.28 (1), 0.13 | 936 | 0.37 | 1.00 (0.16) |
+| | 2021–2023 | 747 | 0.15 | 0.01 | 0.63 (1), 0.43 | 247 | 0.01 | 0.29 (0.39) |
+| | 2024–2026 | 689 | 1.46 | 1.32 | 1.70 (1), 0.19 | 689 | 0.49 | 0.97 (0.17) |
+
+For comparison, the paper's CL values (1987–2020) are:
+
+- adjusted R²: 0.17% (ONFH), 1.25% (ONFH + M + SLH) and 0.03% (ROD);
+- OOS R²: −0.48%, −1.77% and −1.04%.
+
+**Change from 2021–2023 to 2024–2026.** These come from the pooled regression: the change in each coefficient with its Newey-West standard error and interval, and the joint Wald test that all slope changes are zero.
+
+| Model | Coefficient | Change (SE) | 95% interval | t | p | Joint Wald p (slopes) |
+|---|---|---|---|---|---|---|
+| ONFH | intercept (bps) | +4.99 (2.39) | [0.31, 9.68] | 2.09 | 0.037 | 0.54 |
+| | ONFH | +1.16 (1.91) | [−2.58, 4.90] | 0.61 | 0.545 | |
+| ONFH + M + SLH | intercept (bps) | +4.98 (2.36) | [0.35, 9.61] | 2.11 | 0.035 | 0.12 |
+| | ONFH | +1.10 (1.86) | [−2.55, 4.75] | 0.59 | 0.554 | |
+| | M | −6.71 (3.44) | [−13.44, 0.03] | −1.95 | 0.051 | |
+| | SLH | +7.83 (9.20) | [−10.19, 25.86] | 0.85 | 0.394 | |
+| ROD | intercept (bps) | +5.27 (2.41) | [0.56, 9.99] | 2.19 | 0.028 | 0.50 |
+| | ROD | −1.27 (1.87) | [−4.94, 2.39] | −0.68 | 0.495 | |
+
+![Slopes by subperiod](figures/replication_subperiods.png)
+
+- **No statistically significant evidence of slope changes, and no model is significant in either period.** Every slope interval contains zero in both periods. No model's joint Wald test rejects "all slopes are zero" in either period (smallest p = 0.17). The change in each ONFH and ROD slope is under 0.7 of its standard error.
+- **Fit stays small.** Adjusted R² is at most 0.4% in 2021–2023. It reaches 1.3% (ROD) and 3.0% (ONFH + M + SLH) in 2024–2026, but the 2024–2026 values depend on 10 March 2026 (see below). Out of sample, no model beats the historical mean significantly in either period: the smallest one-sided Clark-West p-value is 0.17.
+- **The only borderline slope result is M, and it is not robust.** In the three-predictor model, the M slope falls by 6.71 (p = 0.051). That fall depends on 2026:
+
+  | Sample | Change in the M slope (SE) | p | Joint Wald p |
+  |---|---|---|---|
+  | Baseline | −6.71 (3.44) | 0.051 | 0.12 |
+  | Without 10 March 2026 | −3.08 (1.80) | 0.088 | 0.17 |
+  | Without 2026 (second period 2024–2025) | −2.10 (1.86) | 0.26 | 0.078 |
+  | Without the 1% largest \|ROD\| days | −4.07 (1.80) | 0.024 | 0.093 |
+
+  The last row is the only one of the 20 slope-change tests (5 slopes × 4 samples) below 5%. It uses a threshold chosen on the full sample, and no slope test falls below the Bonferroni level for 5 slopes, 0.01.
+- **The intercept shifts, which is a change in average drift, not in momentum.** The intercept is the expected LH return when the predictors are zero. It is −3.6 to −3.8 bps in 2021–2023 (p = 0.02) and +1.3 to +1.5 bps in 2024–2026 (p ≈ 0.4–0.5). The average LH return itself is −3.9 bps and +1.3 bps.
+
+  The change, about +5 bps, has p = 0.03–0.04. It weakens without 10 March 2026 (p = 0.05–0.07) and without 2026 (p = 0.11–0.13). It is not robust either, and it says nothing about whether the day's return predicts the close. The 2021–2023 drift is consistent with #30's negative Always Long result.
+- **10 March 2026 drives the 2024–2026 ROD estimate and fit.** Without that day:
+  - the 2024–2026 ROD slope is −0.54 [−2.21, 1.14], close to 2021–2023's −0.79;
+  - the change is +0.25 (1.31), p = 0.85;
+  - adjusted R² falls from 1.32% to −0.04%;
+  - as an ex-post influence check, not forecast performance, the 2024–2026 OOS R² falls from +0.49% to −0.09%.
+
+  In `replication_subperiod_fit.csv`, the OOS results of the variants without 10 March 2026 and without the 1% largest |ROD| days are labeled `ex_post_sensitivity`. Their excluded dates were chosen with hindsight, and the extreme-ROD threshold uses the full sample. Only the baseline and the without-2026 variant are prospective: dropping 2026 only shortens the evaluation, and its 2024–2025 forecasts are the baseline's.
+
+  Without all of 2026, the 2024–2025 ROD slope is +0.19, and the change is +0.97 (1.41), p = 0.49.
+- **Against the full sample and the paper.** Both subperiod ROD intervals contain the full-sample estimate (−1.46) and the paper's (0.67). Both periods agree with the paper's conclusion for CL: no significant rest-of-day effect, and a negative or near-zero OOS R².
+
+**Bogoev (2025), Appendix Table IA1** (`reference/Bogoev000902049.pdf`, PDF page 139). This Durham PhD thesis reports, for WTI, a regression of LH on ONFH and ROD together over March 2019 to March 2023 (its figure caption says March 2020 to April 2023). It reports ONFH −0.010 (0.007), ROD 0.080*** (0.01) and an adjusted R² of 0.069.
+
+Its table note says that slopes and R² are × 100 and that the parentheses hold t-statistics. Read literally, ROD would not be significant, and the slope would be far smaller than the paper's. The values look more like raw slopes with standard errors. Its units are therefore uncertain, and we do not compare magnitudes.
+
+The same joint specification on our data over the overlapping window (561 dates, 4 January 2021 to 31 March 2023) gives:
+
+- ONFH: −3.37 [−7.10, 0.37]
+- ROD: +1.33 [−1.38, 4.04]
+- adjusted R²: 0.42%
+
+The signs match Bogoev's, but neither slope is significant (`replication_subperiods_bogoev.csv`). Two caveats apply:
+
+- In this joint model, ROD's slope is the effect of the rest of the day with ONFH held fixed (the M and SLH part), because ONFH is part of ROD. It is not the ROD slope of the paper's Eq. 7.
+- The samples, data source and standard errors differ. This is context, not a replication or a contradiction.
+
 ## Differences from the paper
 
 | Item | Paper (CL) | This replication |
@@ -126,14 +233,15 @@ Each row re-estimates the ROD model (slope × 100, standard error in parentheses
 
 ## Conclusion
 
-In 2021–2026 we find **no evidence of intraday momentum in CL**. The slopes are small and slightly negative, every confidence interval includes zero, and only the ROD model beats the historical mean out of sample. That small gain is not statistically distinguishable from zero, and it turns negative without 10 March 2026. That day also accounts for more than half of the negative full-sample ROD slope. This agrees with the paper's own CL result, which was not significant either. In the new hypotheses (#31–#33), the questions are therefore whether the overnight and daytime parts of ROD predict differently, and whether the reversal seen on extreme days is a volatility-regime effect (#32), rather than whether CL momentum exists.
+In 2021–2026 we find **no evidence of intraday momentum in CL**. The slopes are small and slightly negative, every confidence interval includes zero, and only the ROD model beats the historical mean out of sample. That small gain is not statistically distinguishable from zero, and it turns negative without 10 March 2026. That day also accounts for more than half of the negative full-sample ROD slope. This agrees with the paper's own CL result, which was not significant either. In the new hypotheses (#31–#33), the questions are therefore whether the overnight and daytime parts of ROD predict differently, and whether the reversal seen on extreme days is a volatility-regime effect (#32), rather than whether CL momentum exists. Splitting the sample into 2021–2023 and 2024–2026 does not change this: there is no statistically significant evidence that any slope changed between the periods, and the more negative 2024–2026 ROD estimate comes from 10 March 2026 (#38).
 
 ## Reproducing
 
 ```bash
 python -m src.build_return_features --config config/return_features.yaml   # #28
 python -m src.replicate_regressions --config config/replication.yaml       # #29
+python -m src.compare_subperiods --config config/subperiods.yaml            # #38
 python -m pytest
 ```
 
-Settings, including the paper's Table B3 values used for the comparison, are in `config/replication.yaml`. `reports/tables/replication.manifest.json` records the input and output hashes.
+Settings, including the paper's Table B3 values used for the comparison, are in `config/replication.yaml`. The subperiods and the Bogoev (2025) values are in `config/subperiods.yaml`. `reports/tables/replication.manifest.json` and `replication_subperiods.manifest.json` record the input and output hashes.
