@@ -1,0 +1,41 @@
+# Settings for src/compare_subperiods.py: the three Baltussen et al. (2021) CL regressions estimated
+# separately for 2021-2023 and 2024-2026, with a pooled test of the slope difference (#38).
+
+features: data/processed/cl_return_features.parquet
+# Target, models, scale, confidence level and the paper's Table B3 values are shared with #29.
+replication_config: config/replication.yaml
+tables_dir: reports/tables
+figures_dir: reports/figures
+
+periods:
+  # Nonoverlapping subperiods of the #29 regression sample (the `sample` flag, same rolls, filters and
+  # exclusions). end: null keeps every date up to the last one in the features.
+  "2021_2023": {start: "2021-01-01", end: "2023-12-31"}
+  "2024_2026": {start: "2024-01-01", end: null}
+
+lags:
+  # common_7: the full-sample automatic lag length of #29, used in every regression so that standard
+  # errors are comparable across periods. auto_n: floor(4 (n / 100)^(2/9)) with each regression's own n
+  # (6 for each subperiod), reported as a labeled alternative.
+  common: 7
+
+variants:
+  # Sensitivity of the subperiod comparison to the 2026 extremes. Each variant drops the sample dates
+  # that match its rule before splitting: a list of dates, |column| above a full-sample quantile (that
+  # threshold uses the whole sample, so it is an in-sample check only), or every date on or after a day.
+  baseline: {}
+  exclude_2026_03_10: {dates: ["2026-03-10"]}
+  exclude_extreme_rod: {column: r_rod, abs_quantile_above: 0.99}
+  exclude_2026: {on_or_after: "2026-01-01"}
+
+bogoev:
+  # Bogoev (2025), Durham PhD thesis (reference/Bogoev000902049.pdf, PDF page 139), Appendix Table IA1,
+  # "WTI Oil futures" row: LH on ONFH and ROD
+  # jointly, March 2019 to March 2023 (the figure caption says March 2020 to April 2023). The table note
+  # says slopes and adjusted R2 are x 100 and that parentheses hold t-statistics, but the values look
+  # like standard errors, so the units are uncertain. Reported here only for context, not replicated.
+  source: "Bogoev (2025), Liquidity Pricing and Crisis, Durham University PhD thesis, Appendix Table IA1"
+  reported: {r_onfh: [-0.010, 0.007], r_rod: [0.080, 0.01], adj_r2: 0.069}
+  # The same joint specification on our data over the part of its sample that we cover.
+  window: {start: "2021-01-01", end: "2023-03-31"}
+  predictors: [r_onfh, r_rod]
