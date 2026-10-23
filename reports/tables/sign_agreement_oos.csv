@@ -1,0 +1,6 @@
+variant,model,n,adj_r2_pct,hac_lags,oos_forecasts,oos_r2_pct,clark_west_t,clark_west_p,wald_stat,wald_df,wald_p,nested_in,oos_r2_vs_nested_pct,clark_west_t_vs_nested,clark_west_p_vs_nested
+baseline,rod,1436,0.524116,7,936,0.367821,1.00197,0.158179,,,,,,,
+baseline,rod_by_agreement,1436,1.70888,7,936,0.746057,1.62135,0.0524713,9.72122,1,0.00182153,rod,0.379632,1.58511,0.0564711
+baseline,on_day,1436,0.519159,7,936,-0.293523,0.335146,0.368758,,,,,,,
+baseline,on_day_product,1436,1.88043,7,936,-0.602787,0.598862,0.274632,5.33111,1,0.0209481,on_day,-0.308359,0.714319,0.237515
+baseline,on_day_by_agreement,1436,2.47221,7,936,-0.188294,1.06916,0.142498,10.9034,2,0.00428904,on_day,0.104921,1.29443,0.0977591
