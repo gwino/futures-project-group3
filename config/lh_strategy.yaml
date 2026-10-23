@@ -1,0 +1,99 @@
+# Settings for src/backtest_lh_strategy.py: the final-half-hour directional strategy of Baltussen, Da,
+# Lammers & Martens (2021), Eq. (12), traded on CL for 2021-2026 with executable fills and costs (#30).
+
+reference_prices: data/processed/cl_minute_reference_prices.parquet
+front_minutes: data/processed/cl_minute_front_contracts.parquet
+session_quality: data/processed/cl_minute_session_quality.csv
+roll_comparison: data/processed/cl_minute_roll_comparison.csv
+# Reference times, time zone and staleness rule are shared with the minute pipeline (#27).
+minute_config: config/prepare_minute.yaml
+# Return features from #28, used only to cross-check the signal when the file exists.
+return_features: data/processed/cl_return_features.parquet
+tables_dir: reports/tables
+figures_dir: reports/figures
+
+sample:
+  # Trade dates in [start, end] that pass the paper filters (`paper_sample`). end: null keeps every date.
+  start: "2021-01-01"
+  end: null
+
+signals:
+  # Each signal gives the position for the last half hour from prices known at the decision time.
+  # long_if_positive: +1 when P_end / P_start - 1 > 0, -1 when < 0, flat when exactly 0.
+  # long_if_all_positive: +1 when every listed return is positive, -1 when every one is negative, else flat.
+  # constant: the same position every day (a benchmark).
+  rod: {long_if_positive: [p_prev_1330, p_1300]}                          # paper's eta(r_ROD), the baseline
+  onfh: {long_if_positive: [p_prev_1330, p_0830]}                         # eta(r_ONFH)
+  onfh_rod_agree: {long_if_all_positive: [[p_prev_1330, p_0830], [p_prev_1330, p_1300]]}  # eta(r_ONFH, r_ROD)
+  always_long: {constant: 1}                                              # paper's Always Long benchmark
+baseline_signal: rod
+# Every signal price must be observed at or before this time on the trade date (no look-ahead).
+decision_time: "13:00"
+
+execution:
+  entry_time: "13:00"
+  exit_time: "13:30"
+  # next_bar_open: the open of the first held-contract 1-minute bar that starts at or after the time,
+  # so the fill is the first trade at or after it. reference: the pipeline's price at that time (the
+  # close of the bar before it), which is the paper's frictionless convention and not executable.
+  fill: next_bar_open
+  # Skip the day (no position) when no held-contract bar starts within this many minutes of the time.
+  max_delay_minutes: 5
+  # settlement_proxy fills (the trade-at-settlement variant): the volume-weighted average of the held
+  # contract's bars in the last settlement_proxy_minutes before the time, each bar at its OHLC average.
+  # CL settles on the 13:28-13:30 CT volume-weighted average price, so 2 minutes before 13:30 is the proxy.
+  settlement_proxy_minutes: 2
+  contracts: 1
+  multiplier: 1000     # USD per 1.00 move in the CL price, per contract
+  tick_size: 0.01
+
+execution_variants:
+  # Timing sensitivity for the baseline signal. Each entry overrides the execution settings above.
+  reference_prices: {entry: reference, exit: reference}            # paper's eta(r), no delay, no costs
+  next_bar_open: {entry: next_bar_open, exit: next_bar_open}       # baseline
+  exit_reference_close: {entry: next_bar_open, exit: reference}    # exit at the 13:30 reference price
+  entry_one_minute_late: {entry: next_bar_open, exit: next_bar_open, entry_time: "13:01"}
+  # Trade-at-settlement exit: a TAS order placed with the 13:00 entry clears at the daily settlement
+  # (the 13:28-13:30 CT VWAP) plus its differential, so the exit pays no spread at zero differential.
+  # The exit side's slippage is set here; commission still applies to both sides.
+  exit_tas_zero_differential: {entry: next_bar_open, exit: settlement_proxy, exit_slippage_ticks_per_side: 0}
+  exit_tas_one_tick: {entry: next_bar_open, exit: settlement_proxy, exit_slippage_ticks_per_side: 1}
+baseline_execution: next_bar_open
+
+costs:
+  # Per side (entry and exit each count as one side). There is no quote data in the sample, so the
+  # bid-ask cost is a proxy: the CL front month usually quotes a 1-tick spread (USD 10 per contract),
+  # so 0.5 tick per side is paying the spread with marketable orders and 1 tick adds impact.
+  commission_per_side_usd: 2.50
+  slippage_ticks_per_side: 0.5
+  # Grid for the cost-sensitivity table and figure.
+  sensitivity_ticks_per_side: [0, 0.25, 0.5, 1, 1.5, 2, 3]
+  sensitivity_commission_usd: [0, 2.50, 5.00]
+
+roll_rules:
+  # paper: the contract held in the reference prices (volume crossover, #27). pre_expiry_3: the existing
+  # 3-sessions-before-expiry calendar (#17/#18); its reference prices and fills are rebuilt from the
+  # held and next listed contracts' minute bars.
+  paper: {}
+  pre_expiry_3: {roll_date_column: roll_date_pre_expiry}
+
+blackouts:
+  # Days on which the baseline signal does not trade, for the robustness table. A boolean column
+  # (true is skipped), a column at_most / above a value, or a list of dates.
+  all_days: {}
+  skip_roll_dates: {column: roll_flag}
+  skip_expiry_adjacent: {column: sessions_to_expiry, at_most: 3}
+  skip_degraded_dates: {column: degraded_date}
+  skip_after_non_trading_days: {column: gap_days, above: 1}
+  skip_2026_03_10: {dates: ["2026-03-10"]}
+
+evaluation:
+  trading_days_per_year: 252
+  confidence: 0.95
+  # Newey-West lags for the standard error of the mean daily return, next to the plain standard error.
+  # "auto" is floor(4 (n / 100)^(2/9)), 7 for 1,436 days, the rule used in #29 and #35.
+  hac_lags: auto
+  rolling_window: 252
+  worst_days: 10
+  # A trading day is adverse when its net loss exceeds this many USD per contract.
+  adverse_loss_usd: 500
