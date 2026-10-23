@@ -1,0 +1,5 @@
+model,variant,predictors,n,r2_pct,adj_r2_pct,hac_lags,oos_forecasts,oos_r2_pct,clark_west_t,clark_west_p,equality_difference_x100,equality_se_x100,equality_wald,equality_p,adj_r2_gain_vs_on_pct,oos_r2_vs_on_pct,clark_west_p_vs_on,adj_r2_gain_vs_day_pct,oos_r2_vs_day_pct,clark_west_p_vs_day
+on,baseline,ON,1436,0.236074,0.166504,7,936,-0.495443,-0.103905,0.541378,,,,,,,,,,
+day,baseline,DAY,1436,0.386661,0.317196,7,936,0.123817,0.783458,0.216679,,,,,,,,,,
+on_day,baseline,ON + DAY,1436,0.657808,0.519159,7,936,-0.293523,0.335146,0.368758,0.574834,1.42815,0.162009,0.687313,0.352655,0.200924,0.152002,0.201963,-0.417857,0.480083
+rod,baseline,ROD,1436,0.593438,0.524116,7,936,0.367821,1.00197,0.158179,,,,,,,,,,

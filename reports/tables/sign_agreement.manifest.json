@@ -1,0 +1,276 @@
+{
+  "config": "config\\sign_agreement.yaml",
+  "settings": {
+    "return_features": "data/processed/cl_return_features.parquet",
+    "reference_prices": "data/processed/cl_minute_reference_prices.parquet",
+    "front_minutes": "data/processed/cl_minute_front_contracts.parquet",
+    "reference_config": "config/prepare_minute.yaml",
+    "roll_comparison": "data/processed/cl_minute_roll_comparison.csv",
+    "return_config": "config/return_features.yaml",
+    "strategy_config": "config/lh_strategy.yaml",
+    "tables_dir": "reports/tables",
+    "figures_dir": "reports/figures",
+    "target": "r_lh",
+    "components": {
+      "on": "r_on",
+      "day": "r_day"
+    },
+    "rod": "r_rod",
+    "log_variant": {
+      "target": "log_lh",
+      "components": {
+        "on": "log_on",
+        "day": "log_day"
+      },
+      "rod": "log_rod"
+    },
+    "scale": 100,
+    "inference": {
+      "hac_lags": "auto",
+      "confidence": 0.95
+    },
+    "categories": {
+      "agree": [
+        "ON+/DAY+",
+        "ON-/DAY-"
+      ],
+      "disagree": [
+        "ON+/DAY-",
+        "ON-/DAY+"
+      ]
+    },
+    "grid": {
+      "bins": 3,
+      "min_cell": 30
+    },
+    "models": {
+      "rod": [
+        "rod"
+      ],
+      "rod_by_agreement": [
+        "rod",
+        "agree",
+        "rod_x_agree"
+      ],
+      "on_day": [
+        "on",
+        "day"
+      ],
+      "on_day_product": [
+        "on",
+        "day",
+        "on_x_day"
+      ],
+      "on_day_by_agreement": [
+        "on",
+        "day",
+        "agree",
+        "on_x_agree",
+        "day_x_agree"
+      ]
+    },
+    "nested": [
+      [
+        "rod_by_agreement",
+        "rod"
+      ],
+      [
+        "on_day_product",
+        "on_day"
+      ],
+      [
+        "on_day_by_agreement",
+        "on_day"
+      ]
+    ],
+    "strategies": {
+      "rod": {
+        "rule": "sign_of_rod"
+      },
+      "agree_only": {
+        "rule": "sign_of_rod",
+        "when": "agree"
+      },
+      "disagree_only": {
+        "rule": "sign_of_rod",
+        "when": "disagree"
+      },
+      "day_sign": {
+        "rule": "sign_of_day"
+      },
+      "on_sign": {
+        "rule": "sign_of_on"
+      }
+    },
+    "baseline_strategy": "rod",
+    "oos": {
+      "min_train_obs": 500
+    },
+    "robustness": {
+      "exclude_2026_03_10": {
+        "dates": [
+          "2026-03-10"
+        ]
+      },
+      "exclude_2022_and_2026": {
+        "years": [
+          2022,
+          2026
+        ]
+      },
+      "exclude_roll_dates": {
+        "column": "roll_flag"
+      },
+      "exclude_degraded_dates": {
+        "column": "degraded_date"
+      },
+      "exclude_after_non_trading_days": {
+        "column": "gap_days",
+        "above": 1
+      }
+    },
+    "family_tests": 5,
+    "family_level": 0.05
+  },
+  "strategy_settings": {
+    "execution": {
+      "entry_time": "13:00",
+      "exit_time": "13:30",
+      "fill": "next_bar_open",
+      "max_delay_minutes": 5,
+      "settlement_proxy_minutes": 2,
+      "contracts": 1,
+      "multiplier": 1000,
+      "tick_size": 0.01
+    },
+    "costs": {
+      "commission_per_side_usd": 2.5,
+      "slippage_ticks_per_side": 0.5,
+      "sensitivity_ticks_per_side": [
+        0,
+        0.25,
+        0.5,
+        1,
+        1.5,
+        2,
+        3
+      ],
+      "sensitivity_commission_usd": [
+        0,
+        2.5,
+        5.0
+      ]
+    },
+    "evaluation": {
+      "trading_days_per_year": 252,
+      "confidence": 0.95,
+      "hac_lags": "auto",
+      "rolling_window": 252,
+      "worst_days": 10,
+      "adverse_loss_usd": 500
+    },
+    "baseline_execution": "next_bar_open"
+  },
+  "hac_lags_used": 7,
+  "sample": {
+    "observations": 1436,
+    "dates": "2021-01-04 to 2026-10-07",
+    "zero_return_days": 12,
+    "regression_observations": 1424,
+    "lh_zero_days": 21,
+    "first_oos_forecast": "2023-01-06"
+  },
+  "category_counts": {
+    "ON+/DAY+": 415,
+    "ON+/DAY-": 377,
+    "ON-/DAY+": 327,
+    "ON-/DAY-": 305,
+    "zero": 12
+  },
+  "bonferroni_level": 0.01,
+  "pre_expiry_roll_contract_changed_dates": 127,
+  "inputs": {
+    "return_features": {
+      "file": "data/processed/cl_return_features.parquet",
+      "sha256": "4665c6fd3430da5e291dc8c1e47073511c2faa6174d0b0c291e535bdc580fdab"
+    },
+    "reference_prices": {
+      "file": "data/processed/cl_minute_reference_prices.parquet",
+      "sha256": "f7ff50da8f6470c90a46a69956d747b343bf78091e7b3bd0a6ccbbb055aff8c5"
+    },
+    "front_minutes": {
+      "file": "data/processed/cl_minute_front_contracts.parquet",
+      "sha256": "c124ee2ed5ea14fd6fc9bc3e6d4c122e4ead90528efc28bb5949b8ad9ed2d95d"
+    },
+    "roll_comparison": {
+      "file": "data/processed/cl_minute_roll_comparison.csv",
+      "sha256": "0730f7ca60e4c60d1a30aa423f1b483cee50b4d6c18aeb313a03d34b2a28b68c"
+    }
+  },
+  "outputs": {
+    "categories": {
+      "file": "reports\\tables\\sign_agreement_categories.csv",
+      "sha256": "778dd0f9ba47752b74be2c49809585a1e2650c00666d5c2fb4910b643f3a9615"
+    },
+    "grid": {
+      "file": "reports\\tables\\sign_agreement_grid.csv",
+      "sha256": "cad6bb96b60dc553bb6a545467803da615f833d2e4b248718af6c537050f7aa1"
+    },
+    "regressions": {
+      "file": "reports\\tables\\sign_agreement_regressions.csv",
+      "sha256": "ccca648602d20233badf9af85aa9f5ec720cd754af1585ae18d59d7664cccf82"
+    },
+    "models": {
+      "file": "reports\\tables\\sign_agreement_oos.csv",
+      "sha256": "0a9e0193fa20b345345666dc0542d1c86d3d0a5d2cfb7c49e11f872bccc255f2"
+    },
+    "oos_forecasts": {
+      "file": "reports\\tables\\sign_agreement_oos_forecasts.csv",
+      "sha256": "d451c3d0f6f6e9d7a59e71513ec08985f5fa395c982e66d94000753c6f2977b2"
+    },
+    "strategies": {
+      "file": "reports\\tables\\sign_agreement_strategies.csv",
+      "sha256": "8d9e93f3ecb539c6b0db04464aefcfd49ee39aec57e046e6b2b9be83ece22efb"
+    },
+    "strategy_by_year": {
+      "file": "reports\\tables\\sign_agreement_strategy_by_year.csv",
+      "sha256": "c69307d7d5b9273a03bbc65a890ba403c6f5440e2c9d4187f4769ecbe231669b"
+    },
+    "by_year": {
+      "file": "reports\\tables\\sign_agreement_by_year.csv",
+      "sha256": "906956b22f371f6629f8dfe185a6e0acca7157aab1b5413e3d86e90789cbd325"
+    },
+    "robustness": {
+      "file": "reports\\tables\\sign_agreement_robustness.csv",
+      "sha256": "ba1641e57cfd280907ad3dd5fbe5da5c085b3a8135ed0b37b5a2a1f20107e4f6"
+    },
+    "robustness_regressions": {
+      "file": "reports\\tables\\sign_agreement_robustness_regressions.csv",
+      "sha256": "1fc64ae3223bec09b4b9c05b56214315a93736586c5c51aa885515e968f7e780"
+    },
+    "robustness_models": {
+      "file": "reports\\tables\\sign_agreement_robustness_models.csv",
+      "sha256": "ba7bf66f7fe1122f9b6c93752016213cd97bb1efc9070661599197ed2b55ceef"
+    },
+    "figure_categories": {
+      "file": "reports\\figures\\sign_agreement_categories.png",
+      "sha256": "6779453224f41dca55f1237f3c8fdfb77c33cf82af4f2053c5a2b1bf38bce1c8"
+    },
+    "figure_grid": {
+      "file": "reports\\figures\\sign_agreement_grid.png",
+      "sha256": "219dc2cfe19cd955d0a6bad15fa7c43be4d2fc4089741615315d4ed22a6f4981"
+    },
+    "figure_by_year": {
+      "file": "reports\\figures\\sign_agreement_by_year.png",
+      "sha256": "f85daa78958d9f9bbc5b4feda81f3f0d4c6df5337f0254fd883e7ee3d70aba3b"
+    },
+    "figure_cumulative": {
+      "file": "reports\\figures\\sign_agreement_cumulative.png",
+      "sha256": "3471d8dda9a8d922c205056c586089aa2d24b868e229d5a0c1fa5796010dc7b6"
+    }
+  },
+  "created_at_utc": "2026-10-23T19:47:13.684683+00:00",
+  "python": "3.11.9",
+  "pandas": "2.2.3",
+  "numpy": "2.1.3"
+}

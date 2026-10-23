@@ -122,9 +122,13 @@ Run from the repository root, after `git lfs pull` (the processed minute data is
 | Minute dataset and reference prices (#25–#27) | `python -m src.prepare_minute_data --config config/prepare_minute.yaml` | `config/prepare_minute.yaml` | `data/processed/cl_minute_*`, `reports/minute_dataset_handoff.md` |
 | Return features (#28) | `python -m src.build_return_features --config config/return_features.yaml` | `config/return_features.yaml` | `data/processed/cl_return_features*` |
 | Replication regressions (#29) | `python -m src.replicate_regressions --config config/replication.yaml` | `config/replication.yaml` | `reports/tables/replication_*`, `reports/replication_results.md`, `analysis/04_replication_results.ipynb` |
+| Subperiod comparison 2021–2023 vs 2024–2026 (#38) | `python -m src.compare_subperiods --config config/subperiods.yaml` | `config/subperiods.yaml` | `reports/tables/replication_subperiod*`, subsection of `reports/replication_results.md`, Section 6 of `analysis/04_replication_results.ipynb` |
 | Closing-period strategy backtest (#30) | `python -m src.backtest_lh_strategy --config config/lh_strategy.yaml` | `config/lh_strategy.yaml` | `reports/tables/lh_strategy_*.csv`, `reports/figures/lh_strategy_*.png`, `reports/lh_strategy_results.md`, `analysis/05_lh_strategy_results.ipynb` |
+| Overnight versus daytime tests (#31) | `python -m src.analyze_on_day --config config/on_day.yaml` | `config/on_day.yaml` | `reports/tables/on_day_*`, `reports/on_day_results.md`, `analysis/08_on_day_results.ipynb` |
 | Realized-variance features (#32) | `python -m src.build_volatility_features --config config/volatility_features.yaml` | `config/volatility_features.yaml` | `data/processed/cl_volatility_features*` |
 | Volatility-regime tests (#32) | `python -m src.analyze_volatility_regimes --config config/volatility_regimes.yaml` | `config/volatility_regimes.yaml` | `reports/tables/volatility_regimes_*`, `reports/volatility_regimes_results.md`, `analysis/06_volatility_regimes_results.ipynb` |
+| Sign-agreement tests (#33) | `python -m src.analyze_sign_agreement --config config/sign_agreement.yaml` | `config/sign_agreement.yaml` | `reports/tables/sign_agreement_*`, `reports/sign_agreement_results.md`, `analysis/07_sign_agreement_results.ipynb` |
+| Final report (#33) | assembled from the tables above | | `reports/final_report.md` |
 
 `python -m pytest` runs every check.
 
