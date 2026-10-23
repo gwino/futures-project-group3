@@ -49,6 +49,7 @@
       "exit_time": "13:30",
       "fill": "next_bar_open",
       "max_delay_minutes": 5,
+      "settlement_proxy_minutes": 2,
       "contracts": 1,
       "multiplier": 1000,
       "tick_size": 0.01
@@ -70,6 +71,16 @@
         "entry": "next_bar_open",
         "exit": "next_bar_open",
         "entry_time": "13:01"
+      },
+      "exit_tas_zero_differential": {
+        "entry": "next_bar_open",
+        "exit": "settlement_proxy",
+        "exit_slippage_ticks_per_side": 0
+      },
+      "exit_tas_one_tick": {
+        "entry": "next_bar_open",
+        "exit": "settlement_proxy",
+        "exit_slippage_ticks_per_side": 1
       }
     },
     "baseline_execution": "next_bar_open",
@@ -122,7 +133,7 @@
     "evaluation": {
       "trading_days_per_year": 252,
       "confidence": 0.95,
-      "hac_lags": 5,
+      "hac_lags": "auto",
       "rolling_window": 252,
       "worst_days": 10,
       "adverse_loss_usd": 500
@@ -151,7 +162,10 @@
     "sample_days": 1436,
     "first_date": "2021-01-04",
     "last_date": "2026-10-07",
-    "return_features": "not present; signal computed from the reference prices",
+    "hac_lags_used": 7,
+    "return_features": "data\\processed\\cl_return_features.parquet",
+    "shared_dates": 1436,
+    "max_abs_rod_difference": 0.0,
     "baseline_traded_days": 1435,
     "baseline_skipped": {
       "no position (signal zero or missing)": 1
@@ -175,20 +189,20 @@
   },
   "outputs": {
     "lh_strategy_trades.csv": "a83e6d0037c129f321657538bf0a195cfebf84de0cd9bccb12c833ecd52b4bb2",
-    "lh_strategy_summary.csv": "c708eddc3123c7114e9c00f15c58b8b10964fb704985983d914f03f1f30608f8",
-    "lh_strategy_cost_sensitivity.csv": "07f57777e3adf9e193d89f77254f5a268d67c6b3fcc1ededa26d70eda28ad564",
-    "lh_strategy_by_year.csv": "b81027e4b1b04baba4a7c927edc42d0910dbcfad9727eafcdc7378a17480294e",
-    "lh_strategy_roll_rules.csv": "67f1fc6c5070907ccb40d81e1ca363d897775928bfacefb467c30df03f29f5f3",
-    "lh_strategy_robustness.csv": "b54003f23f1334667ef069f4eeeb9f473ef06a554c228b967ec55368a40ec790",
+    "lh_strategy_summary.csv": "d1db6ee1ace573d105e9ede57e75ff1169bdaa4a382a1b6f6e4e43fd89510127",
+    "lh_strategy_cost_sensitivity.csv": "5a998c6c8e7f46309c6c170a6d8e642819ee0203deda73cec8894feec2185c78",
+    "lh_strategy_by_year.csv": "90694027f4f9bdcb7598cd4ace9b2c0b8f818d58dd6cd9a13641e4a1c96e682c",
+    "lh_strategy_roll_rules.csv": "90c09bf92c8bb4e63a6e49218dbe89512973094a3420e9d86d32784c21d16f09",
+    "lh_strategy_robustness.csv": "a0a0b631063f4629097d93d69d477de337df93a161d8a7a61a041cf4031cfd1b",
     "lh_strategy_worst_days.csv": "dc1f871b390a7b01ec9ba8d769d007a3f2fa8e11cff4dc7c493550b21056a795",
     "lh_strategy_rolling.csv": "c7a60ef169b50083c2fb55d14af999b797b00a712bc08fa4765f69ff025c43d9",
     "lh_strategy_cumulative.png": "33a24e4d2f0147ffea23565038da9b123fe839bbac1299aba593c9e68289d521",
-    "lh_strategy_by_year.png": "90157ce98a0d4b4080e2acd6bcfd22b29984169319c155bacdd8fa8987cae22f",
+    "lh_strategy_by_year.png": "1bbca369c361dd9e48d182d5f5f07fb60e39d826ddd1c1b1aba78f04e786aa98",
     "lh_strategy_rolling.png": "6477b95b3de9ca1c2c6e6f02ca3a9dd4d6bf3948b528b68e339d76f91bb8c523",
-    "lh_strategy_cost_sensitivity.png": "2ccc28b684ab41b88f205c4b64532fcca457a270486848363bd015f838a30fd0"
+    "lh_strategy_cost_sensitivity.png": "30b5125fb0c59b5f67d0802f311c42d7102be81472fa92b0dc45d04d65832d06"
   },
   "run": {
-    "time_utc": "2026-10-20T22:27:12.384899+00:00",
+    "time_utc": "2026-10-23T17:01:27.384027+00:00",
     "python": "3.11.9",
     "pandas": "2.2.3",
     "numpy": "2.1.3"

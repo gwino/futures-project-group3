@@ -9,7 +9,7 @@ import pytest
 
 from src.backtest_lh_strategy import (
 	alternative_references, apply_costs, blackout_mask, build_ledger, check_signals, evaluate, hac_standard_error, max_drawdown,
-	next_bar_fills, positions, reference_fills, skip_days,
+	next_bar_fills, positions, reference_fills, settlement_proxy_fills, skip_days,
 )
 
 TZ = "America/Chicago"
@@ -29,6 +29,13 @@ def minutes(*rows: tuple[int, str, float, float]) -> pd.DataFrame:
 			"close": [close for _, _, _, close in rows],
 		}
 	)
+
+
+def ohlcv(*rows: tuple[int, str, float, float, float, float, int]) -> pd.DataFrame:
+	"""1-minute bars from (instrument_id, Chicago minute start, open, high, low, close, volume) tuples."""
+	frame = pd.DataFrame(rows, columns=["instrument_id", "local", "open", "high", "low", "close", "volume"])
+	frame["ts_utc"] = [pd.Timestamp(local, tz=TZ).tz_convert("UTC") for local in frame["local"]]
+	return frame.drop(columns="local")
 
 
 def held_on(*pairs: tuple[str, int]) -> pd.Series:
@@ -135,6 +142,30 @@ def test_reference_fill_is_the_pipeline_price_from_the_bar_before_the_time():
 	assert fill["time"].strftime("%H:%M") == "13:29"
 	with pytest.raises(ValueError, match="13:01"):
 		reference_fills(refs, "13:01", TZ)
+
+
+def test_settlement_proxy_is_the_volume_weighted_average_of_the_two_bars_before_1330():
+	bars = ohlcv(
+		(1, "2024-01-02 13:27", 90.0, 90.0, 90.0, 90.0, 1000),            # before the window: ignored
+		(1, "2024-01-02 13:28", 100.0, 100.4, 99.8, 100.2, 300),          # OHLC average 100.1
+		(1, "2024-01-02 13:29", 100.2, 100.6, 100.2, 100.6, 100),         # OHLC average 100.4
+		(1, "2024-01-02 13:30", 120.0, 120.0, 120.0, 120.0, 1000),        # at the time: ignored
+		(2, "2024-01-02 13:29", 50.0, 50.0, 50.0, 50.0, 500),             # other contract: ignored
+	)
+	fill = settlement_proxy_fills(bars, held_on(("2024-01-02", 1)), "13:30", TZ, 2).loc["2024-01-02"]
+	assert fill["price"] == pytest.approx((100.1 * 300 + 100.4 * 100) / 400)
+	assert fill["time"].strftime("%H:%M") == "13:30" and fill["delay"] == 0
+	missing = settlement_proxy_fills(bars, held_on(("2024-01-03", 1)), "13:30", TZ, 2).loc["2024-01-03"]
+	assert np.isnan(missing["price"]) and pd.isna(missing["time"])
+
+
+def test_exit_side_can_carry_its_own_slippage():
+	refs = references({"trade_date": "2024-01-02", "p_prev_1330": 100.0, "p_1300": 101.0, "p_1330": 101.4})
+	bars = minutes((1, "2024-01-02 13:00", 101.00, 101.1), (1, "2024-01-02 13:30", 101.25, 101.3))
+	both = apply_costs(ledger_for(refs, bars), 2.50, 0.5, EXECUTION).iloc[0]
+	tas = apply_costs(ledger_for(refs, bars), 2.50, 0.5, EXECUTION, exit_slippage_ticks_per_side=0).iloc[0]
+	assert both["slippage_usd"] == pytest.approx(10.0) and tas["slippage_usd"] == pytest.approx(5.0)
+	assert tas["commission_usd"] == 5.0 and tas["pnl_net_usd"] == pytest.approx(240.0)
 
 
 def test_signal_ignores_prices_from_1300_on_and_fills_ignore_prices_before_1300():

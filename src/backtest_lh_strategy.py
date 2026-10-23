@@ -40,6 +40,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 from src.prepare_daily_data import sha256
 from src.prepare_minute_data import at_clock, clock_label, held_contracts, reference_prices
+from src.replicate_regressions import newey_west_lags
 
 MINUTE = pd.Timedelta(minutes=1)
 LEDGER_COLUMNS = [
@@ -181,11 +182,34 @@ def reference_fills(references: pd.DataFrame, clock: str, timezone_name: str) ->
 	return pd.DataFrame({"time": time, "price": frame[f"p_{label}"], "delay": -1 - stale}, index=frame.index)
 
 
-def fills(kind: str, clock: str, references: pd.DataFrame, minutes: pd.DataFrame, held: pd.Series, timezone_name: str, max_delay_minutes: int) -> pd.DataFrame:
+def settlement_proxy_fills(minutes: pd.DataFrame, held: pd.Series, clock: str, timezone_name: str, window_minutes: int) -> pd.DataFrame:
+	"""Volume-weighted average price of the held contract's bars in the window before the time: a settlement proxy.
+
+	CL's daily settlement is the volume-weighted average of outright trades from 13:28:00 to 13:30:00 CT,
+	and a trade-at-settlement (TAS) order clears at that price plus its traded differential. The proxy
+	weights each bar's OHLC average by its volume over the bars starting in [time - window, time). The
+	fill time is the time itself (the settlement is fixed then) and the delay 0; the price is missing
+	when no bar traded in the window.
+	"""
+	dates = pd.DatetimeIndex(held.index)
+	end = pd.DatetimeIndex(at_clock(dates, clock, timezone_name))
+	bounds = pd.DataFrame({"trade_date": dates, "instrument_id": held.to_numpy(), "start": end - pd.Timedelta(minutes=window_minutes), "end": end})
+	bars = minutes[["ts_utc", "instrument_id", "open", "high", "low", "close", "volume"]].sort_values("ts_utc")
+	keyed = pd.merge_asof(bars, bounds.sort_values("start"), left_on="ts_utc", right_on="start", by="instrument_id", direction="backward")
+	keyed = keyed[keyed["trade_date"].notna() & keyed["ts_utc"].lt(keyed["end"])]
+	keyed["weighted"] = keyed[["open", "high", "low", "close"]].mean(axis=1) * keyed["volume"]
+	totals = keyed.groupby("trade_date")[["weighted", "volume"]].sum()
+	price = (totals["weighted"] / totals["volume"]).reindex(dates)
+	return pd.DataFrame({"time": pd.Series(end.tz_convert(timezone_name), index=dates).where(price.notna()), "price": price, "delay": pd.Series(0.0, index=dates).where(price.notna())})
+
+
+def fills(kind: str, clock: str, references: pd.DataFrame, minutes: pd.DataFrame, held: pd.Series, timezone_name: str, execution: dict) -> pd.DataFrame:
 	if kind == "reference":
 		return reference_fills(references, clock, timezone_name)
 	if kind == "next_bar_open":
-		return next_bar_fills(minutes, held, clock, timezone_name, max_delay_minutes)
+		return next_bar_fills(minutes, held, clock, timezone_name, execution["max_delay_minutes"])
+	if kind == "settlement_proxy":
+		return settlement_proxy_fills(minutes, held, clock, timezone_name, execution["settlement_proxy_minutes"])
 	raise ValueError(f"Unknown fill kind {kind}.")
 
 
@@ -224,11 +248,16 @@ def build_ledger(references: pd.DataFrame, position: pd.Series, predictor: pd.Se
 	return ledger.reset_index()
 
 
-def apply_costs(ledger: pd.DataFrame, commission_per_side_usd: float, slippage_ticks_per_side: float, execution: dict) -> pd.DataFrame:
-	"""Commission and slippage per side; net P&L and the net return on the entry notional of the position."""
+def apply_costs(ledger: pd.DataFrame, commission_per_side_usd: float, slippage_ticks_per_side: float, execution: dict, exit_slippage_ticks_per_side: float | None = None) -> pd.DataFrame:
+	"""Commission and slippage per side; net P&L and the net return on the entry notional of the position.
+
+	The exit side can carry its own slippage (for example 0 for a trade-at-settlement exit); by default
+	both sides use slippage_ticks_per_side.
+	"""
 	ledger = ledger.copy()
+	exit_ticks = slippage_ticks_per_side if exit_slippage_ticks_per_side is None else exit_slippage_ticks_per_side
 	ledger["commission_usd"] = ledger["sides"] * commission_per_side_usd
-	ledger["slippage_usd"] = ledger["sides"] * slippage_ticks_per_side * execution["tick_size"] * execution["multiplier"] * execution["contracts"]
+	ledger["slippage_usd"] = ledger["traded"].astype(int) * (slippage_ticks_per_side + exit_ticks) * execution["tick_size"] * execution["multiplier"] * execution["contracts"]
 	ledger["cost_usd"] = ledger["commission_usd"] + ledger["slippage_usd"]
 	ledger["pnl_net_usd"] = ledger["pnl_gross_usd"] - ledger["cost_usd"]
 	notional = ledger["entry_price"] * execution["multiplier"] * execution["contracts"]
@@ -521,14 +550,14 @@ def sample_references(references: pd.DataFrame, sample: dict) -> pd.DataFrame:
 
 def run_signal(references: pd.DataFrame, minutes: pd.DataFrame, signal_name: str, spec: dict, variant: dict, config: dict, timezone_name: str) -> pd.DataFrame:
 	"""Ledger with baseline costs for one signal, one execution variant and one set of reference prices."""
-	execution = {**config["execution"], **{key: value for key, value in variant.items() if key in ("entry_time", "exit_time", "max_delay_minutes")}}
+	execution = {**config["execution"], **{key: value for key, value in variant.items() if key in ("entry_time", "exit_time", "max_delay_minutes", "settlement_proxy_minutes")}}
 	held = references.set_index("trade_date")["instrument_id"]
 	position, predictor = positions(references.set_index("trade_date"), spec)
-	entry = fills(variant["entry"], execution["entry_time"], references, minutes, held, timezone_name, execution["max_delay_minutes"])
-	exit = fills(variant["exit"], execution["exit_time"], references, minutes, held, timezone_name, execution["max_delay_minutes"])
+	entry = fills(variant["entry"], execution["entry_time"], references, minutes, held, timezone_name, execution)
+	exit = fills(variant["exit"], execution["exit_time"], references, minutes, held, timezone_name, execution)
 	ledger = build_ledger(references, position, predictor, entry, exit, signal_name, execution)
 	costs = config["costs"]
-	return apply_costs(ledger, costs["commission_per_side_usd"], costs["slippage_ticks_per_side"], execution)
+	return apply_costs(ledger, costs["commission_per_side_usd"], costs["slippage_ticks_per_side"], execution, variant.get("exit_slippage_ticks_per_side"))
 
 
 def check_against_features(references: pd.DataFrame, path: Path) -> dict:
@@ -546,19 +575,21 @@ def main() -> int:
 	args = parse_args()
 	config, minute_cfg = load_config(args.config)
 	timezone_name = minute_cfg["session"]["timezone"]
-	execution, costs, evaluation = config["execution"], config["costs"], config["evaluation"]
+	execution, costs, evaluation = config["execution"], config["costs"], dict(config["evaluation"])
 	tables_dir, figures_dir = Path(config["tables_dir"]), Path(config["figures_dir"])
 	tables_dir.mkdir(parents=True, exist_ok=True)
 	figures_dir.mkdir(parents=True, exist_ok=True)
 
 	all_references = pd.read_parquet(config["reference_prices"])
-	minutes = pd.read_parquet(config["front_minutes"], columns=["ts_utc", "trade_date", "contract_id", "instrument_id", "open", "close", "held"])
+	minutes = pd.read_parquet(config["front_minutes"], columns=["ts_utc", "trade_date", "contract_id", "instrument_id", "open", "high", "low", "close", "volume", "held"])
 	quality = pd.read_csv(config["session_quality"], parse_dates=["trade_date"]).set_index("trade_date")
 	roll_comparison = pd.read_csv(config["roll_comparison"])
 	references = sample_references(all_references, config["sample"])
 	references["sessions_to_expiry"] = references["trade_date"].map(quality["sessions_to_expiry"])
 	references["gap_days"] = (references["trade_date"] - references["prev_trade_date"]).dt.days
-	checks = {"sample_days": int(len(references)), "first_date": str(references["trade_date"].iloc[0].date()), "last_date": str(references["trade_date"].iloc[-1].date())}
+	# Newey-West lags: the automatic rule floor(4 (n / 100)^(2/9)) of #29 and #35, or a fixed number.
+	evaluation["hac_lags"] = newey_west_lags(len(references)) if evaluation["hac_lags"] == "auto" else int(evaluation["hac_lags"])
+	checks = {"sample_days": int(len(references)), "first_date": str(references["trade_date"].iloc[0].date()), "last_date": str(references["trade_date"].iloc[-1].date()), "hac_lags_used": evaluation["hac_lags"]}
 	checks.update(check_against_features(references, Path(config["return_features"])))
 
 	baseline_name, baseline_variant = config["baseline_signal"], config["execution_variants"][config["baseline_execution"]]

@@ -39,6 +39,10 @@ execution:
   fill: next_bar_open
   # Skip the day (no position) when no held-contract bar starts within this many minutes of the time.
   max_delay_minutes: 5
+  # settlement_proxy fills (the trade-at-settlement variant): the volume-weighted average of the held
+  # contract's bars in the last settlement_proxy_minutes before the time, each bar at its OHLC average.
+  # CL settles on the 13:28-13:30 CT volume-weighted average price, so 2 minutes before 13:30 is the proxy.
+  settlement_proxy_minutes: 2
   contracts: 1
   multiplier: 1000     # USD per 1.00 move in the CL price, per contract
   tick_size: 0.01
@@ -49,6 +53,11 @@ execution_variants:
   next_bar_open: {entry: next_bar_open, exit: next_bar_open}       # baseline
   exit_reference_close: {entry: next_bar_open, exit: reference}    # exit at the 13:30 reference price
   entry_one_minute_late: {entry: next_bar_open, exit: next_bar_open, entry_time: "13:01"}
+  # Trade-at-settlement exit: a TAS order placed with the 13:00 entry clears at the daily settlement
+  # (the 13:28-13:30 CT VWAP) plus its differential, so the exit pays no spread at zero differential.
+  # The exit side's slippage is set here; commission still applies to both sides.
+  exit_tas_zero_differential: {entry: next_bar_open, exit: settlement_proxy, exit_slippage_ticks_per_side: 0}
+  exit_tas_one_tick: {entry: next_bar_open, exit: settlement_proxy, exit_slippage_ticks_per_side: 1}
 baseline_execution: next_bar_open
 
 costs:
@@ -82,7 +91,8 @@ evaluation:
   trading_days_per_year: 252
   confidence: 0.95
   # Newey-West lags for the standard error of the mean daily return, next to the plain standard error.
-  hac_lags: 5
+  # "auto" is floor(4 (n / 100)^(2/9)), 7 for 1,436 days, the rule used in #29 and #35.
+  hac_lags: auto
   rolling_window: 252
   worst_days: 10
   # A trading day is adverse when its net loss exceeds this many USD per contract.
