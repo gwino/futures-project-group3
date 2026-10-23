@@ -2,7 +2,7 @@
 
 Group 3, FINM 37000 Futures and Related Derivatives. Draft of the final project report (#33). Every number below is read from a saved table in `reports/tables/` produced by a script in `src/` from a configuration in `config/`; the "Where it comes from" column of each results table names the file. Section 8 gives the commands that regenerate everything.
 
-> **Status.** Sections 4.1, 4.2, 4.4 and 4.5 are complete (#29, #30, #32, #33). Section 4.3 (overnight versus daytime, #31) and Section 4.6 (subperiods, #38) are open issues; their subsections state what will go there and show the preview results that already exist.
+> **Status.** Sections 4.1 to 4.5 are complete (#29, #30, #31, #32, #33). Section 4.6 (subperiods, #38) is an open issue; its subsection states what will go there.
 
 ## 1. Question and answer in brief
 
@@ -14,7 +14,7 @@ We ask four things about CL from January 2021 to October 2026, using one-minute 
 |---|---|---|
 | Does the paper's momentum relationship hold for CL after 2020? | #29 | **No.** All three slopes are slightly negative and every 95% interval includes zero (ROD slope × 100: −1.46 [−3.35, 0.43]). The only positive out-of-sample R² (ROD, 0.37%) is not distinguishable from zero and turns negative without one day, 10 March 2026. |
 | Can the sign of ROD be traded in the last half hour? | #30 | **No.** Before costs the strategy earns −1.2 basis points a day (SE 1.3); with USD 15 of costs per round trip, −3.1 (1.3) and a Sharpe ratio of −1.1. No cost assumption makes it profitable because the gross return is already negative. |
-| Do overnight and daytime returns predict differently? | #31 | **Open.** In the preview from #32, LH ~ ON + DAY gives ON −1.0 (1.1) and DAY −2.3 (1.6) on 1,186 dates: both slightly negative, neither distinguishable from zero or from each other. |
+| Do overnight and daytime returns predict differently? | #31 | **No.** In LH ~ ON + DAY the slopes × 100 are −1.26 (1.01) and −1.84 (1.43); the difference is 0.58 (1.43), p = 0.69. Splitting ROD adds nothing in or out of sample: the joint model's OOS R² (−0.29%) is below ROD's (0.37%), and only DAY alone (0.12%) beats the historical mean, insignificantly. |
 | Does the relationship change in high-volatility regimes? | #32 | **No measurable change.** The ON and DAY slopes are more negative on high-volatility days, but the differences (−1.0 (1.8) and −1.8 (2.9)) are far from significant and the interaction models forecast worse out of sample. |
 | Does agreement between the overnight and daytime directions matter? | #33 | **Yes, and in the opposite direction to the paper's story.** When ON and DAY agree, the last half hour reverses: the paper's strategy earns −4.5 (1.7) basis points on agreement days against +1.9 (1.8) on disagreement days, difference −6.4 (2.3), p = 0.007 (Bonferroni level 0.010). The interaction raises the out-of-sample R² from 0.37% to 0.75% (Clark-West p = 0.05). The effect is concentrated in the two high-volatility years, 2022 and 2026. |
 | Did the relationship differ between 2021–2023 and 2024–2026? | #38 | **Open.** |
@@ -94,16 +94,23 @@ The paper's timing strategy (its Eq. 12): long over the last half hour when ROD 
 
 ![Cumulative P&L](figures/lh_strategy_cumulative.png)
 
-### 4.3 Overnight versus daytime predictability (#31, open)
+### 4.3 Overnight versus daytime predictability (#31)
 
-This section will report LH ~ ON, LH ~ DAY, LH ~ ON + DAY and the ROD benchmark with standardized coefficients, a Wald test of coefficient equality, expanding-window OOS R² and stability by year and roll rule. The base model already estimated in #32 and #33 is the preview (where it comes from: `volatility_regimes_regressions.csv`, `sign_agreement_regressions.csv`):
+ROD compounds an overnight part (previous 13:30 → 08:00 CT) and a daytime part (08:00 → 13:00 CT), which are nearly uncorrelated (−0.05). Slopes × 100 with Newey-West standard errors; the last column is the LH response, in basis points, to a one-standard-deviation move of the predictor, which puts ON (SD 1.94%) and DAY (SD 1.66%) on the same footing. Where it comes from: `on_day_regressions.csv`, `on_day_models.csv`.
 
-| Sample | ON slope × 100 (SE) | DAY slope × 100 (SE) | Adj. R² (%) | OOS R² (%) |
-|---|---|---|---|---|
-| 1,436 dates (#33) | −1.26 (1.01) | −1.84 (1.43) | 0.52 | −0.29 |
-| 1,186 dates from 2022 (#32) | −1.02 (1.08) | −2.29 (1.59) | 0.62 | 0.35 |
+| Model | Term | Slope × 100 (SE) | 95% interval | Adj. R² (%) | OOS R² (%) | Response per SD (bps) |
+|---|---|---|---|---|---|---|
+| LH ~ ON | ON | −1.18 (1.01) | [−3.15, 0.80] | 0.17 | −0.50 | −2.3 |
+| LH ~ DAY | DAY | −1.76 (1.42) | [−4.53, 1.02] | 0.32 | 0.12 | −2.9 |
+| LH ~ ON + DAY | ON | −1.26 (1.01) | [−3.25, 0.72] | 0.52 | −0.29 | −2.4 |
+| | DAY | −1.84 (1.43) | [−4.64, 0.97] | | | −3.1 |
+| LH ~ ROD (paper) | ROD | −1.46 (0.97) | [−3.35, 0.43] | 0.52 | 0.37 | −3.6 |
 
-Neither component predicts the close on its own, and the two slopes are within one standard error of each other.
+- Neither component predicts the close, and they do not predict differently: the Wald test of equal slopes gives 0.58 (1.43), p = 0.69. The joint model's adjusted R² equals the ROD model's, so the decomposition adds no in-sample fit.
+- Out of sample, adding DAY to ON raises the OOS R² by 0.20 percentage points (Clark-West p = 0.15) and adding ON to DAY lowers it by 0.42: the daytime leg carries the little information there is, in the reversal direction, and mostly in 2026 (calendar-year DAY slope −9.7 (4.0) in 2026, within ±2.1 of zero in every other year).
+- The result does not depend on log versus simple returns, on the roll rule or on the Newey-West lag length; dropping 10 March 2026 shrinks both slopes to about −0.7 and the joint adjusted R² to zero.
+
+![ON and DAY slopes](figures/on_day_slopes.png)
 
 ### 4.4 Volatility regimes (#32)
 
@@ -158,7 +165,7 @@ This section will re-estimate the three paper specifications in the two nonoverl
 - **One market, six years, two crises.** The sample is 1,436 days against the paper's 8,336, and its regime variation comes from two episodes.
 - **No quotes.** Trading costs use a spread proxy and a grid; the trade-at-settlement variant bounds what removing the exit spread is worth.
 - **Multiple hypotheses.** Three new hypotheses with several specifications each. The sign-agreement result clears a Bonferroni level in sample and sits at p ≈ 0.05 out of sample; it should be read as a lead for future work, not an established effect.
-- **Open sections.** #31 and #38 are pending; the preview in 4.3 is from models estimated for other purposes.
+- **Open section.** The subperiod comparison (#38) is pending.
 - **Reversal mechanism.** The reversal on agreement days is consistent with profit-taking or inventory unwinding before the reference close, but nothing in the data identifies who trades.
 
 ## 7. Differences from the paper
@@ -193,12 +200,13 @@ git lfs pull
 | Return features (#28) | `python -m src.build_return_features --config config/return_features.yaml` | `data/processed/cl_return_features*` |
 | Replication regressions (#29) | `python -m src.replicate_regressions --config config/replication.yaml` | `reports/tables/replication_*`, `reports/figures/replication_*` |
 | Strategy backtest (#30) | `python -m src.backtest_lh_strategy --config config/lh_strategy.yaml` | `reports/tables/lh_strategy_*`, `reports/figures/lh_strategy_*` |
+| Overnight versus daytime (#31) | `python -m src.analyze_on_day --config config/on_day.yaml` | `reports/tables/on_day_*`, `reports/figures/on_day_*` |
 | Realized-variance features (#32) | `python -m src.build_volatility_features --config config/volatility_features.yaml` | `data/processed/cl_volatility_features*` |
 | Volatility regimes (#32) | `python -m src.analyze_volatility_regimes --config config/volatility_regimes.yaml` | `reports/tables/volatility_regimes_*`, `reports/figures/volatility_regimes_*` |
 | Sign agreement (#33) | `python -m src.analyze_sign_agreement --config config/sign_agreement.yaml` | `reports/tables/sign_agreement_*`, `reports/figures/sign_agreement_*` |
-| Checks | `python -m pytest` | 70 tests |
+| Checks | `python -m pytest` | 75 tests |
 
-Each script writes a `*.manifest.json` next to its tables with the settings used and the SHA256 of every input and output, so a rerun can be compared file by file. The notebooks `analysis/04` to `analysis/07` read the saved tables only and display them; they compute nothing the scripts do not. Detailed write-ups: `reports/replication_results.md`, `reports/lh_strategy_results.md`, `reports/volatility_regimes_results.md`, `reports/sign_agreement_results.md`; data documentation in `data/README.md` and `reports/minute_dataset_handoff.md`.
+Each script writes a `*.manifest.json` next to its tables with the settings used and the SHA256 of every input and output, so a rerun can be compared file by file. The notebooks `analysis/04` to `analysis/08` read the saved tables only and display them; they compute nothing the scripts do not. Detailed write-ups: `reports/replication_results.md`, `reports/lh_strategy_results.md`, `reports/on_day_results.md`, `reports/volatility_regimes_results.md`, `reports/sign_agreement_results.md`; data documentation in `data/README.md` and `reports/minute_dataset_handoff.md`.
 
 ## 9. Contributions
 
@@ -206,7 +214,7 @@ Each script writes a `*.manifest.json` next to its tables with the settings used
 |---|---|---|
 | Gabriella Wiem (Tech Lead) | Environment and data acquisition (#3, #5), minute dataset, cleaning, rolls and coverage audit (#25–#27), project tracker (#24, #38), reviews and merges | #11–#14, #34 |
 | Jiayi Chen (Communication Lead) | README and plan (#1, #2), daily data preparation (#15, #17, #19), return features and replication regressions (#28, #29), reviews of #36 and #37 | #1, #21, #35 |
-| Ethan Huang (Design Lead) | Scope decisions (#4), intraday data preparation and exploration (#16, #18, #20), strategy backtest (#30), volatility features and regimes (#32), sign agreement and this report (#33) | #10, #22, #23, #36, #37 |
+| Ethan Huang (Design Lead) | Scope decisions (#4), intraday data preparation and exploration (#16, #18, #20), strategy backtest (#30), overnight versus daytime (#31), volatility features and regimes (#32), sign agreement and this report (#33) | #10, #22, #23, #36, #37 |
 
 ## References
 

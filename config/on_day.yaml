@@ -1,0 +1,58 @@
+# Settings for src/analyze_on_day.py: do the overnight (ON) and daytime (DAY) parts of the paper's
+# rest-of-day return predict the last half hour (LH) of CL differently (#31)?
+
+return_features: data/processed/cl_return_features.parquet
+# Inputs for the alternative roll rule, as in #29: reference prices rebuilt from the minute bars under
+# the existing 3-sessions-before-expiry calendar (#17/#18).
+reference_config: config/prepare_minute.yaml
+front_minutes: data/processed/cl_minute_front_contracts.parquet
+roll_comparison: data/processed/cl_minute_roll_comparison.csv
+return_config: config/return_features.yaml
+tables_dir: reports/tables
+figures_dir: reports/figures
+
+# Simple returns, as in the paper: (1 + ON)(1 + DAY) = 1 + ROD. The log version, where log ON + log DAY
+# = log ROD exactly, is a labeled robustness variant.
+target: r_lh
+predictors: {"on": r_on, day: r_day, rod: r_rod}   # quoted: YAML reads a bare on as true
+log_variant: {target: log_lh, predictors: {"on": log_on, day: log_day, rod: log_rod}}
+# Slopes, standard errors, adjusted R2 and OOS R2 are reported multiplied by 100, as in the paper.
+scale: 100
+
+models:
+  # name: predictors; every model has an intercept.
+  "on": ["on"]           # overnight only
+  day: [day]             # daytime only
+  on_day: ["on", day]    # joint decomposition
+  rod: [rod]             # paper's benchmark (Eq. 7)
+# Incremental information: the joint model against each single-component model it nests, out of
+# sample (Clark-West) and in adjusted R2.
+nested: [[on_day, "on"], [on_day, day]]
+# Wald test of equal slopes in the joint model (df 1), from the HAC covariance.
+equality_test: {model: on_day, terms: ["on", day]}
+
+inference:
+  # Newey-West standard errors with the n / (n - k) correction; "auto" is floor(4 (n / 100)^(2/9)), 7 here.
+  hac_lags: auto
+  sensitivity_lags: [0, 1, 5, 10, 20]
+  confidence: 0.95
+
+oos:
+  # Expanding-window forecasts after the paper's minimum of 500 observations (first forecast
+  # 2023-01-04, 936 forecasts), against the historical mean and the nested model.
+  min_train_obs: 500
+  sensitivity_min_train: [250, 500, 750, 1000]
+
+rolling:
+  window: 252
+
+robustness:
+  # Each variant re-estimates every model without the dates that match its rule (the HAC lag variants
+  # and the pre-expiry roll rule are added by the script). Quantile rules use the full sample.
+  exclude_roll_dates: {column: roll_flag}
+  exclude_degraded_dates: {column: degraded_date}
+  exclude_expiry_adjacent: {column: sessions_to_expiry, at_most: 3}
+  exclude_after_non_trading_days: {column: gap_days, above: 1}
+  exclude_extreme_on: {column: r_on, abs_quantile_above: 0.99}
+  exclude_extreme_day: {column: r_day, abs_quantile_above: 0.99}
+  exclude_2026_03_10: {dates: ["2026-03-10"]}

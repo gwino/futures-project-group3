@@ -139,4 +139,4 @@ The result does not depend on a single day or on the roll convention. Without 10
 
 - Tests cover the classification and the zero-return days, the strategy return and hit rate, the group means and the agree-minus-disagree difference on a constructed sample, the grid's partition of the dates, recovery of a planted agreement effect with its Wald test and nested OOS comparison, and the sign-filtered positions. Every sign is from a 13:00 CT price.
 - The trading comparison reuses the #30 functions, so the baseline row reproduces the #30 net result exactly (−3.15 bps, −USD 31,095).
-- 70 tests pass (`python -m pytest`), 6 of them for this module.
+- 75 tests pass (`python -m pytest`), 6 of them for this module.
