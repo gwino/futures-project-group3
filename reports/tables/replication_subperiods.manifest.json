@@ -1,0 +1,297 @@
+{
+  "config": "config/subperiods.yaml",
+  "settings": {
+    "features": "data/processed/cl_return_features.parquet",
+    "replication_config": "config/replication.yaml",
+    "tables_dir": "reports/tables",
+    "figures_dir": "reports/figures",
+    "periods": {
+      "2021_2023": {
+        "start": "2021-01-01",
+        "end": "2023-12-31"
+      },
+      "2024_2026": {
+        "start": "2024-01-01",
+        "end": null
+      }
+    },
+    "lags": {
+      "common": 7
+    },
+    "variants": {
+      "baseline": {},
+      "exclude_2026_03_10": {
+        "dates": [
+          "2026-03-10"
+        ],
+        "oos": "ex_post_sensitivity"
+      },
+      "exclude_extreme_rod": {
+        "column": "r_rod",
+        "abs_quantile_above": 0.99,
+        "oos": "ex_post_sensitivity"
+      },
+      "exclude_2026": {
+        "on_or_after": "2026-01-01"
+      }
+    },
+    "bogoev": {
+      "source": "Bogoev (2025), Liquidity Pricing and Crisis, Durham University PhD thesis, Appendix Table IA1",
+      "reported": {
+        "r_onfh": [
+          -0.01,
+          0.007
+        ],
+        "r_rod": [
+          0.08,
+          0.01
+        ],
+        "adj_r2": 0.069
+      },
+      "window": {
+        "start": "2021-01-01",
+        "end": "2023-03-31"
+      },
+      "predictors": [
+        "r_onfh",
+        "r_rod"
+      ]
+    }
+  },
+  "replication_settings": {
+    "target": "r_lh",
+    "models": {
+      "onfh": [
+        "r_onfh"
+      ],
+      "onfh_m_slh": [
+        "r_onfh",
+        "r_m",
+        "r_slh"
+      ],
+      "rod": [
+        "r_rod"
+      ]
+    },
+    "scale": 100,
+    "inference": {
+      "hac_lags": "auto",
+      "sensitivity_lags": [
+        0,
+        1,
+        5,
+        10,
+        20
+      ],
+      "confidence": 0.95
+    }
+  },
+  "periods": {
+    "full": {
+      "n": 1436,
+      "dates": "2021-01-04 to 2026-10-07"
+    },
+    "2021_2023": {
+      "n": 747,
+      "dates": "2021-01-04 to 2023-12-29"
+    },
+    "2024_2026": {
+      "n": 689,
+      "dates": "2024-01-02 to 2026-10-07"
+    }
+  },
+  "wald_tests": [
+    {
+      "variant": "baseline",
+      "lag_rule": "common_7=auto_n",
+      "model": "onfh",
+      "earlier": "2021_2023",
+      "later": "2024_2026",
+      "n": 1436,
+      "n_later": 689,
+      "hac_lags": 7,
+      "wald_stat": 0.3671908575507781,
+      "wald_df": 1,
+      "wald_p": 0.5445394873382599
+    },
+    {
+      "variant": "baseline",
+      "lag_rule": "common_7=auto_n",
+      "model": "onfh_m_slh",
+      "earlier": "2021_2023",
+      "later": "2024_2026",
+      "n": 1436,
+      "n_later": 689,
+      "hac_lags": 7,
+      "wald_stat": 5.921334760141688,
+      "wald_df": 3,
+      "wald_p": 0.11550081735552971
+    },
+    {
+      "variant": "baseline",
+      "lag_rule": "common_7=auto_n",
+      "model": "rod",
+      "earlier": "2021_2023",
+      "later": "2024_2026",
+      "n": 1436,
+      "n_later": 689,
+      "hac_lags": 7,
+      "wald_stat": 0.4649082404019051,
+      "wald_df": 1,
+      "wald_p": 0.49533898983469227
+    },
+    {
+      "variant": "exclude_2026_03_10",
+      "lag_rule": "common_7=auto_n",
+      "model": "onfh",
+      "earlier": "2021_2023",
+      "later": "2024_2026",
+      "n": 1435,
+      "n_later": 688,
+      "hac_lags": 7,
+      "wald_stat": 1.4645845266075392,
+      "wald_df": 1,
+      "wald_p": 0.22620208098577965
+    },
+    {
+      "variant": "exclude_2026_03_10",
+      "lag_rule": "common_7=auto_n",
+      "model": "onfh_m_slh",
+      "earlier": "2021_2023",
+      "later": "2024_2026",
+      "n": 1435,
+      "n_later": 688,
+      "hac_lags": 7,
+      "wald_stat": 4.997210221963399,
+      "wald_df": 3,
+      "wald_p": 0.1720015395671958
+    },
+    {
+      "variant": "exclude_2026_03_10",
+      "lag_rule": "common_7=auto_n",
+      "model": "rod",
+      "earlier": "2021_2023",
+      "later": "2024_2026",
+      "n": 1435,
+      "n_later": 688,
+      "hac_lags": 7,
+      "wald_stat": 0.036987920895028,
+      "wald_df": 1,
+      "wald_p": 0.8474896419796076
+    },
+    {
+      "variant": "exclude_extreme_rod",
+      "lag_rule": "common_7=auto_n",
+      "model": "onfh",
+      "earlier": "2021_2023",
+      "later": "2024_2026",
+      "n": 1421,
+      "n_later": 679,
+      "hac_lags": 7,
+      "wald_stat": 0.7527850624679101,
+      "wald_df": 1,
+      "wald_p": 0.3855958935399342
+    },
+    {
+      "variant": "exclude_extreme_rod",
+      "lag_rule": "common_7=auto_n",
+      "model": "onfh_m_slh",
+      "earlier": "2021_2023",
+      "later": "2024_2026",
+      "n": 1421,
+      "n_later": 679,
+      "hac_lags": 7,
+      "wald_stat": 6.412928505406723,
+      "wald_df": 3,
+      "wald_p": 0.09316036776398927
+    },
+    {
+      "variant": "exclude_extreme_rod",
+      "lag_rule": "common_7=auto_n",
+      "model": "rod",
+      "earlier": "2021_2023",
+      "later": "2024_2026",
+      "n": 1421,
+      "n_later": 679,
+      "hac_lags": 7,
+      "wald_stat": 0.28643416386382053,
+      "wald_df": 1,
+      "wald_p": 0.5925147160314159
+    },
+    {
+      "variant": "exclude_2026",
+      "lag_rule": "common_7=auto_n",
+      "model": "onfh",
+      "earlier": "2021_2023",
+      "later": "2024_2026",
+      "n": 1244,
+      "n_later": 497,
+      "hac_lags": 7,
+      "wald_stat": 1.764739663961038,
+      "wald_df": 1,
+      "wald_p": 0.18403442914785595
+    },
+    {
+      "variant": "exclude_2026",
+      "lag_rule": "common_7=auto_n",
+      "model": "onfh_m_slh",
+      "earlier": "2021_2023",
+      "later": "2024_2026",
+      "n": 1244,
+      "n_later": 497,
+      "hac_lags": 7,
+      "wald_stat": 6.8217522835203415,
+      "wald_df": 3,
+      "wald_p": 0.07780144189583385
+    },
+    {
+      "variant": "exclude_2026",
+      "lag_rule": "common_7=auto_n",
+      "model": "rod",
+      "earlier": "2021_2023",
+      "later": "2024_2026",
+      "n": 1244,
+      "n_later": 497,
+      "hac_lags": 7,
+      "wald_stat": 0.4795258112454035,
+      "wald_df": 1,
+      "wald_p": 0.48863718317251204
+    }
+  ],
+  "inputs": [
+    {
+      "file": "data/processed/cl_return_features.parquet",
+      "sha256": "4665c6fd3430da5e291dc8c1e47073511c2faa6174d0b0c291e535bdc580fdab"
+    },
+    {
+      "file": "config/replication.yaml",
+      "sha256": "1d6cb0db07b1dbb29a45be66dbb87d2c2f92ebccc0dbf570c9bb9aa004d51aa1"
+    }
+  ],
+  "outputs": {
+    "estimates": {
+      "file": "reports/tables/replication_subperiods.csv",
+      "sha256": "81242555590a9d6d8e32d124b1b3b1f9ae8d1df39a0b7e8193051873c7d355ea"
+    },
+    "fit": {
+      "file": "reports/tables/replication_subperiod_fit.csv",
+      "sha256": "cefdfc5927629683512a86b4fd90b4b50d112526958ee2fea00c610d01abf2a5"
+    },
+    "differences": {
+      "file": "reports/tables/replication_subperiod_differences.csv",
+      "sha256": "6e538e41c9bfd18514c9f927044c36504582adfa87df1ffb459b32925f60e2fd"
+    },
+    "bogoev": {
+      "file": "reports/tables/replication_subperiods_bogoev.csv",
+      "sha256": "463769898285b4b06446388cdc45c185374ecbd6950f05a17dd44bb8b94fd2a2"
+    },
+    "figure": {
+      "file": "reports/figures/replication_subperiods.png",
+      "sha256": "b878b0f63a3b88f07b1631c8a5ecbc0174415905b3332a2b31fac57277fad95b"
+    }
+  },
+  "created_at_utc": "2026-10-23T17:59:47.931156+00:00",
+  "python": "3.11.8",
+  "pandas": "2.2.3",
+  "numpy": "2.1.3"
+}

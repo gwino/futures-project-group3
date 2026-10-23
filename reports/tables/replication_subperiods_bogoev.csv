@@ -1,0 +1,7 @@
+source,lag_rule,model,term,n,first_date,last_date,hac_lags,coef_x100,se_x100,t_stat,p_value,ci_low_x100,ci_high_x100,r2_pct,adj_r2_pct,coef_as_reported,parenthesis_as_reported,adj_r2_as_reported
+"this project, same specification",common_7,onfh_rod_joint,r_onfh,561,2021-01-04,2023-03-31,7,-3.36697,1.90697,-1.76562,0.0774604,-7.10456,0.370617,0.777246,0.421609,,,
+"this project, same specification",common_7,onfh_rod_joint,r_rod,561,2021-01-04,2023-03-31,7,1.32714,1.38223,0.960141,0.336984,-1.38199,4.03626,0.777246,0.421609,,,
+"this project, same specification",auto_n,onfh_rod_joint,r_onfh,561,2021-01-04,2023-03-31,5,-3.36697,2.06229,-1.63263,0.102546,-7.40899,0.675053,0.777246,0.421609,,,
+"this project, same specification",auto_n,onfh_rod_joint,r_rod,561,2021-01-04,2023-03-31,5,1.32714,1.44128,0.920801,0.357154,-1.49773,4.152,0.777246,0.421609,,,
+"Bogoev (2025), Liquidity Pricing and Crisis, Durham University PhD thesis, Appendix Table IA1",as reported,onfh_rod_joint,r_onfh,,,,,,,,,,,,,-0.01,0.007,0.069
+"Bogoev (2025), Liquidity Pricing and Crisis, Durham University PhD thesis, Appendix Table IA1",as reported,onfh_rod_joint,r_rod,,,,,,,,,,,,,0.08,0.01,0.069
