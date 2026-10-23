@@ -2,7 +2,7 @@
 
 Group 3, FINM 37000 Futures and Related Derivatives. Draft of the final project report (#33). Every number below is read from a saved table in `reports/tables/` produced by a script in `src/` from a configuration in `config/`; the "Where it comes from" column of each results table names the file. Section 8 gives the commands that regenerate everything.
 
-> **Status.** Sections 4.1 to 4.5 are complete (#29, #30, #31, #32, #33). Section 4.6 (subperiods, #38) is an open issue; its subsection states what will go there.
+> **Status.** All six result sections are written. Sections 4.1 to 4.5 read from tables merged on main (#29, #30, #31, #32, #33); Section 4.6 reads from the tables of PR #39 (#38), which is under review, so its file names resolve once that PR merges.
 
 ## 1. Question and answer in brief
 
@@ -17,7 +17,7 @@ We ask four things about CL from January 2021 to October 2026, using one-minute 
 | Do overnight and daytime returns predict differently? | #31 | **No.** In LH ~ ON + DAY the slopes × 100 are −1.26 (1.01) and −1.84 (1.43); the difference is 0.58 (1.43), p = 0.69. Splitting ROD adds nothing in or out of sample: the joint model's OOS R² (−0.29%) is below ROD's (0.37%), and only DAY alone (0.12%) beats the historical mean, insignificantly. |
 | Does the relationship change in high-volatility regimes? | #32 | **No measurable change.** The ON and DAY slopes are more negative on high-volatility days, but the differences (−1.0 (1.8) and −1.8 (2.9)) are far from significant and the interaction models forecast worse out of sample. |
 | Does agreement between the overnight and daytime directions matter? | #33 | **Yes, and in the opposite direction to the paper's story.** When ON and DAY agree, the last half hour reverses: the paper's strategy earns −4.5 (1.7) basis points on agreement days against +1.9 (1.8) on disagreement days, difference −6.4 (2.3), p = 0.007 (Bonferroni level 0.010). The interaction raises the out-of-sample R² from 0.37% to 0.75% (Clark-West p = 0.05). The effect is concentrated in the two high-volatility years, 2022 and 2026. |
-| Did the relationship differ between 2021–2023 and 2024–2026? | #38 | **Open.** |
+| Did the relationship differ between 2021–2023 and 2024–2026? | #38 | **No.** The ROD slope × 100 is −0.79 [−2.74, 1.17] in 2021–2023 and −2.06 [−5.16, 1.04] in 2024–2026; the change, −1.27 (1.87), has p = 0.50, and no model is significant in either period. The one change near 5% (the M slope, p = 0.051) is not robust. What does shift is the level: the average last-half-hour return moves from about −3.7 to +1.4 basis points. |
 
 The overall picture: in post-2020 CL there is no intraday momentum to replicate, no tradable strategy, and the one new regularity we find is a **reversal on unambiguous days** that is statistically modest and tied to crisis years. These are null and negative findings, and the project's success criterion (reproducible results that a teammate can regenerate) does not depend on the sign of the result.
 
@@ -150,9 +150,28 @@ At 13:00 CT the signs of ON and DAY classify each day as agreement (ON+/DAY+, ON
 
 ![Two-dimensional view](figures/sign_agreement_grid.png)
 
-### 4.6 Subperiods 2021–2023 versus 2024–2026 (#38, open)
+### 4.6 Subperiods 2021–2023 versus 2024–2026 (#38)
 
-This section will re-estimate the three paper specifications in the two nonoverlapping periods, test the coefficient difference with a pooled regression and subperiod interactions, and discuss Bogoev (2025), who reports a positive WTI rest-of-day relationship for 2019–2023 with a different sample and specification.
+The three paper specifications re-estimated on two nonoverlapping periods of the #29 sample, 2021–2023 (747 dates) and 2024–2026 (689 dates), with the common 7 Newey-West lags. The change in each slope is tested in one pooled regression with a period indicator and its interactions, so a slope that is significant in one period and not the other is never read as a difference. Slopes × 100 with 95% intervals. Where it comes from: `replication_subperiods.csv`, `replication_subperiod_fit.csv`, `replication_subperiod_differences.csv` (PR #39).
+
+| Model / slope | 2021–2023 | 2024–2026 | Change (SE), p |
+|---|---|---|---|
+| ONFH | −1.94 [−4.68, 0.81] | −0.78 [−3.32, 1.77] | +1.16 (1.91), 0.55 |
+| ONFH + M + SLH: M | 1.26 [−1.19, 3.70] | −5.45 [−11.73, 0.82] | −6.71 (3.44), 0.051 |
+| ROD | −0.79 [−2.74, 1.17] | −2.06 [−5.16, 1.04] | −1.27 (1.87), 0.50 |
+
+| Model | Adj. R², 2021–2023 / 2024–2026 (%) | Wald p (all slopes = 0) | OOS R² (%) | Clark-West p |
+|---|---|---|---|---|
+| ONFH | 0.39 / 0.00 | 0.17 / 0.55 | −0.57 / −0.37 | 0.54 / 0.43 |
+| ONFH + M + SLH | 0.38 / 2.96 | 0.28 / 0.35 | −1.81 / −1.38 | 0.70 / 0.80 |
+| ROD | 0.01 / 1.32 | 0.43 / 0.19 | 0.01 / 0.49 | 0.39 / 0.17 |
+
+- No slope changes significantly and no model is significant in either period; the smallest Wald p is 0.17. The M change at p = 0.051 is p = 0.088 without 10 March 2026 and 0.26 without 2026, and none of the 20 slope-change tests is below the Bonferroni level of 0.01.
+- 10 March 2026 again drives the later period: without it the 2024–2026 ROD slope is −0.54, the change +0.25 (1.31), p = 0.85, and ROD's adjusted R² falls from 1.32% to −0.04%.
+- The intercept shifts from about −3.7 basis points (p = 0.02) to about +1.4, a change of about +5 basis points (p = 0.03–0.04). This is a change in the level of the last-half-hour drift, not in momentum, and matches the negative Always Long result in Section 4.2.
+- **Bogoev (2025)**, Appendix Table IA1, reports a positive and significant WTI rest-of-day slope for March 2019 to March 2023 in a joint ONFH + ROD regression. The same joint model on our overlapping window (2021-01 to 2023-03) gives ROD +1.33 [−1.38, 4.04] and ONFH −3.37 [−7.10, 0.37]: the signs match, neither slope is significant. The sample (2019–2020 included, with the COVID sell-off), the specification and the table's units differ from ours, so it is context rather than a replication or a contradiction; testing it directly would need 2019–2020 minute data.
+
+![Subperiods](figures/replication_subperiods.png)
 
 ## 5. What drives the results: three recurring facts
 
@@ -165,7 +184,7 @@ This section will re-estimate the three paper specifications in the two nonoverl
 - **One market, six years, two crises.** The sample is 1,436 days against the paper's 8,336, and its regime variation comes from two episodes.
 - **No quotes.** Trading costs use a spread proxy and a grid; the trade-at-settlement variant bounds what removing the exit spread is worth.
 - **Multiple hypotheses.** Three new hypotheses with several specifications each. The sign-agreement result clears a Bonferroni level in sample and sits at p ≈ 0.05 out of sample; it should be read as a lead for future work, not an established effect.
-- **Open section.** The subperiod comparison (#38) is pending.
+- **Pending merge.** Section 4.6 reports the results of PR #39 (#38), which is under review; its tables and figure join the repository when it merges.
 - **Reversal mechanism.** The reversal on agreement days is consistent with profit-taking or inventory unwinding before the reference close, but nothing in the data identifies who trades.
 
 ## 7. Differences from the paper
@@ -199,12 +218,13 @@ git lfs pull
 | Minute dataset, reference prices, rolls (#25–#27) | `python -m src.prepare_minute_data --config config/prepare_minute.yaml` (needs the raw `.dbn` files) | `data/processed/cl_minute_*` |
 | Return features (#28) | `python -m src.build_return_features --config config/return_features.yaml` | `data/processed/cl_return_features*` |
 | Replication regressions (#29) | `python -m src.replicate_regressions --config config/replication.yaml` | `reports/tables/replication_*`, `reports/figures/replication_*` |
+| Subperiod comparison (#38, PR #39) | `python -m src.compare_subperiods --config config/subperiods.yaml` | `reports/tables/replication_subperiod*`, `reports/figures/replication_subperiods.png` |
 | Strategy backtest (#30) | `python -m src.backtest_lh_strategy --config config/lh_strategy.yaml` | `reports/tables/lh_strategy_*`, `reports/figures/lh_strategy_*` |
 | Overnight versus daytime (#31) | `python -m src.analyze_on_day --config config/on_day.yaml` | `reports/tables/on_day_*`, `reports/figures/on_day_*` |
 | Realized-variance features (#32) | `python -m src.build_volatility_features --config config/volatility_features.yaml` | `data/processed/cl_volatility_features*` |
 | Volatility regimes (#32) | `python -m src.analyze_volatility_regimes --config config/volatility_regimes.yaml` | `reports/tables/volatility_regimes_*`, `reports/figures/volatility_regimes_*` |
 | Sign agreement (#33) | `python -m src.analyze_sign_agreement --config config/sign_agreement.yaml` | `reports/tables/sign_agreement_*`, `reports/figures/sign_agreement_*` |
-| Checks | `python -m pytest` | 75 tests |
+| Checks | `python -m pytest` | 75 tests on this branch; PR #39 adds 11 |
 
 Each script writes a `*.manifest.json` next to its tables with the settings used and the SHA256 of every input and output, so a rerun can be compared file by file. The notebooks `analysis/04` to `analysis/08` read the saved tables only and display them; they compute nothing the scripts do not. Detailed write-ups: `reports/replication_results.md`, `reports/lh_strategy_results.md`, `reports/on_day_results.md`, `reports/volatility_regimes_results.md`, `reports/sign_agreement_results.md`; data documentation in `data/README.md` and `reports/minute_dataset_handoff.md`.
 
@@ -213,12 +233,13 @@ Each script writes a `*.manifest.json` next to its tables with the settings used
 | Member | Issues | Pull requests |
 |---|---|---|
 | Gabriella Wiem (Tech Lead) | Environment and data acquisition (#3, #5), minute dataset, cleaning, rolls and coverage audit (#25–#27), project tracker (#24, #38), reviews and merges | #11–#14, #34 |
-| Jiayi Chen (Communication Lead) | README and plan (#1, #2), daily data preparation (#15, #17, #19), return features and replication regressions (#28, #29), reviews of #36 and #37 | #1, #21, #35 |
+| Jiayi Chen (Communication Lead) | README and plan (#1, #2), daily data preparation (#15, #17, #19), return features and replication regressions (#28, #29), subperiod comparison (#38), reviews of #36 and #37 | #1, #21, #35, #39 |
 | Ethan Huang (Design Lead) | Scope decisions (#4), intraday data preparation and exploration (#16, #18, #20), strategy backtest (#30), overnight versus daytime (#31), volatility features and regimes (#32), sign agreement and this report (#33) | #10, #22, #23, #36, #37 |
 
 ## References
 
 - Baltussen, G., Da, Z., Lammers, S., and Martens, M. (2021). Hedging demand and market intraday momentum. *Journal of Financial Economics*, 142(1), 377–403.
+- Bogoev, D. (2025). *Liquidity Pricing and Crisis: New Metrics from Traditional and Blockchain-Based Markets*. Appendix Table IA1 (`reference/Bogoev000902049.pdf`).
 - Clark, T. E., and West, K. D. (2007). Approximately normal tests for equal predictive accuracy in nested models. *Journal of Econometrics*, 138(1), 291–311.
 - Lo, A. W. (2002). The statistics of Sharpe ratios. *Financial Analysts Journal*, 58(4), 36–52.
 - Newey, W. K., and West, K. D. (1987). A simple, positive semi-definite, heteroskedasticity and autocorrelation consistent covariance matrix. *Econometrica*, 55(3), 703–708.
