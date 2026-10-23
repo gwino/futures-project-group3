@@ -1,0 +1,49 @@
+column,dtype,meaning
+trade_date,datetime64[ns],CME trade date t
+prev_trade_date,datetime64[ns],Previous trade date
+contract_id,object,Contract held on t; every path uses it
+rv_on,float64,"Realized variance previous 13:30 -> 08:00 CT: sum of squared 1-minute log returns of the held contract, returns across a halt of 60+ minutes excluded"
+n_on,int64,Number of 1-minute returns in rv_on
+max_gap_on,float64,Longest gap in minutes between consecutive bars among the returns in rv_on
+jumps_on,int64,"Returns across a halt of 60+ minutes previous 13:30 -> 08:00 CT (the daily 16:00-17:00 halt, weekends, holidays), excluded from rv_on"
+jump_var_on,float64,Sum of the squared excluded reopening returns previous 13:30 -> 08:00 CT
+bars_on,int64,"Bars in the path previous 13:30 -> 08:00 CT, including the starting bar"
+first_close_on,float64,Close of the first bar of the path (the price at previous 13:30)
+last_close_on,float64,Close of the last bar of the path (the price at 08:00)
+first_bar_on,"datetime64[ns, UTC]","Start of the first bar of the path, UTC"
+last_bar_on,"datetime64[ns, UTC]","Start of the last bar of the path, UTC"
+start_price_on,float64,Reference price at previous 13:30 (#27)
+end_price_on,float64,Reference price at 08:00 (#27)
+endpoints_match_on,bool,The path's first and last closes equal the reference prices
+rv_day,float64,"Realized variance 08:00 -> 13:00 CT: sum of squared 1-minute log returns of the held contract, returns across a halt of 60+ minutes excluded"
+n_day,int64,Number of 1-minute returns in rv_day
+max_gap_day,float64,Longest gap in minutes between consecutive bars among the returns in rv_day
+jumps_day,int64,"Returns across a halt of 60+ minutes 08:00 -> 13:00 CT (the daily 16:00-17:00 halt, weekends, holidays), excluded from rv_day"
+jump_var_day,float64,Sum of the squared excluded reopening returns 08:00 -> 13:00 CT
+bars_day,int64,"Bars in the path 08:00 -> 13:00 CT, including the starting bar"
+first_close_day,float64,Close of the first bar of the path (the price at 08:00)
+last_close_day,float64,Close of the last bar of the path (the price at 13:00)
+first_bar_day,"datetime64[ns, UTC]","Start of the first bar of the path, UTC"
+last_bar_day,"datetime64[ns, UTC]","Start of the last bar of the path, UTC"
+start_price_day,float64,Reference price at 08:00 (#27)
+end_price_day,float64,Reference price at 13:00 (#27)
+endpoints_match_day,bool,The path's first and last closes equal the reference prices
+rv_rod,float64,"Overnight plus daytime realized variance (previous 13:30 -> 13:00 CT), reopening jumps excluded"
+rv_rod_with_jumps,float64,rv_rod plus the squared reopening jumps of both windows
+rv_rod_5d,float64,Mean of rv_rod over the last 5 trade dates including t (known at 13:00 CT on t)
+vol_on_pct,float64,sqrt(rv_on) x 100: realized volatility previous 13:30 -> 08:00 CT in percent
+vol_day_pct,float64,sqrt(rv_day) x 100: realized volatility 08:00 -> 13:00 CT in percent
+vol_rod_pct,float64,sqrt(rv_rod) x 100: realized volatility of the combined window in percent
+overnight_minutes,int64,"Held-contract minutes traded between the previous 13:30 and 08:00 CT (session quality, #27)"
+overnight_missing_minutes,int64,Minutes in that interval in which another outright traded but the held contract did not
+overnight_longest_gap_minutes,int64,Longest such run overnight
+window_minutes,int64,Held-contract minutes traded 08:00-13:30 CT
+window_missing_minutes,int64,Minutes 08:00-13:30 CT in which another outright traded but the held contract did not
+roll_flag,bool,t is the first session in a new contract
+folded_holiday,bool,A weekend or holiday session was folded into t
+degraded_date,bool,Databento flags data quality on t
+early_close,bool,The market closed 30+ minutes before 16:00 CT on t
+low_volume,bool,Held-contract session volume under 100 contracts
+complete,bool,All reference prices exist on t
+paper_sample,bool,"complete, not an early close, and not low volume (paper filters)"
+sample,bool,paper_sample and both windows have a path: the regression sample

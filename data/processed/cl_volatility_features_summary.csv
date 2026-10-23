@@ -1,0 +1,18 @@
+check,value,note
+trade_dates,1448,2021-01-04 to 2026-10-07
+sample_trade_dates,1436,paper_sample with both paths
+paths_on,1448/1448,missing: 
+endpoints_match_on,1436/1436,path starts and ends at the reference prices (sample dates)
+returns_on,"median 1044, min 819, max 2278",1-minute returns per path in the sample
+jumps_on,"{1: 1401, 2: 35}",reopening returns excluded per path: count of paths
+jump_share_on,0.154,share of the window's total squared returns that sits in the excluded reopening jumps
+max_gap_on,"{7.0: 11, 8.0: 8, 9.0: 5, 10.0: 4, 11.0: 4}","longest kept gap (minutes) per path: count of paths, largest five"
+vol_on_pct,"median 1.405, p90 2.555, max 12.458","realized volatility per window, percent"
+paths_day,1448/1448,missing: 
+endpoints_match_day,1436/1436,path starts and ends at the reference prices (sample dates)
+returns_day,"median 300, min 296, max 300",1-minute returns per path in the sample
+jumps_day,{0: 1436},reopening returns excluded per path: count of paths
+jump_share_day,0.000,share of the window's total squared returns that sits in the excluded reopening jumps
+max_gap_day,"{1.0: 1428, 2.0: 8}","longest kept gap (minutes) per path: count of paths, largest five"
+vol_day_pct,"median 1.370, p90 2.218, max 6.825","realized volatility per window, percent"
+corr_rv_on_rv_day,0.733,correlation of overnight and daytime realized variance across sample dates
