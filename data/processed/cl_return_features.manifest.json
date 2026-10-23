@@ -1,0 +1,103 @@
+{
+  "config": "config/return_features.yaml",
+  "settings": {
+    "reference_prices": "data/processed/cl_minute_reference_prices.parquet",
+    "session_quality": "data/processed/cl_minute_session_quality.csv",
+    "output_dir": "data/processed",
+    "sample": {
+      "start": "2021-01-01",
+      "end": null
+    },
+    "returns": {
+      "on": [
+        "p_prev_1330",
+        "p_0800"
+      ],
+      "fh": [
+        "p_0800",
+        "p_0830"
+      ],
+      "onfh": [
+        "p_prev_1330",
+        "p_0830"
+      ],
+      "m": [
+        "p_0830",
+        "p_1230"
+      ],
+      "slh": [
+        "p_1230",
+        "p_1300"
+      ],
+      "rod": [
+        "p_prev_1330",
+        "p_1300"
+      ],
+      "day": [
+        "p_0800",
+        "p_1300"
+      ],
+      "lh": [
+        "p_1300",
+        "p_1330"
+      ]
+    },
+    "target": "lh",
+    "decision_time": "13:00",
+    "log_returns": true,
+    "log_identities": [
+      [
+        "rod",
+        [
+          "on",
+          "day"
+        ]
+      ],
+      [
+        "rod",
+        [
+          "onfh",
+          "m",
+          "slh"
+        ]
+      ],
+      [
+        "onfh",
+        [
+          "on",
+          "fh"
+        ]
+      ]
+    ],
+    "oos": {
+      "min_train_obs": 500
+    }
+  },
+  "inputs": [
+    {
+      "file": "data/processed/cl_minute_reference_prices.parquet",
+      "sha256": "f7ff50da8f6470c90a46a69956d747b343bf78091e7b3bd0a6ccbbb055aff8c5"
+    },
+    {
+      "file": "data/processed/cl_minute_session_quality.csv",
+      "sha256": "34ad8602d03014e3c15ae77de40d4d9510ab08692f6f38faa353f0a16aa4a952"
+    }
+  ],
+  "outputs": {
+    "features": {
+      "file": "data/processed/cl_return_features.parquet",
+      "sha256": "4665c6fd3430da5e291dc8c1e47073511c2faa6174d0b0c291e535bdc580fdab"
+    },
+    "columns": {
+      "file": "data/processed/cl_return_features_columns.csv",
+      "sha256": "0489231e085af353b018a5df33472bc948246051d9b21af3eade668330ab31e2"
+    },
+    "summary": {
+      "file": "data/processed/cl_return_features_summary.csv",
+      "sha256": "070cd1d2cc0b45bcc32df340d13f1223abdb903485b09ad279a4fb8b76441f76"
+    }
+  },
+  "created_at_utc": "2026-10-20T03:29:28.539378+00:00",
+  "python": "3.11.8",
+  "pandas": "2.2.3"
+}
