@@ -102,7 +102,7 @@ Joint-model slopes × 100 (SE) under each variant.
 | Without the 1% largest \|DAY\| days | 1,421 | −0.23 (0.86) | −1.33 (0.85) | 0.36 | 0.07 |
 | Without 10 March 2026 | 1,435 | −0.73 (0.89) | −0.63 (0.93) | 0.93 | 0.00 |
 
-The conventions do not matter. The extreme days do: dropping the 15 largest daytime moves or the single day 10 March 2026 removes most of what little fit there is, the same pattern as in the replication (#29).
+The conventions do not matter. The extreme days do: dropping the 15 largest daytime moves or the single day 10 March 2026 removes most of what little fit there is, the same pattern as in the replication (#29). Out-of-sample statistics are reported for the variants whose exclusions are known in advance (`on_day_robustness_models.csv`); for the two quantile-based exclusions they are omitted, because the dates are chosen with a full-sample threshold and forecasts on the remaining dates would not be prospective.
 
 ## Interpretation
 
@@ -112,4 +112,4 @@ The paper's hedging-demand story does not distinguish the overnight and daytime 
 
 - Tests cover the column mapping, recovery of a planted daytime-only effect with the equality test and both nested out-of-sample comparisons, the standardized slope as coefficient × sd(predictor) / sd(target), the exact additivity of the log decomposition, and the configuration checks for unknown predictors and non-nested pairs.
 - The baseline ROD row reproduces the #29 estimate (−1.46 (0.97), OOS R² 0.37%) exactly, since both scripts use the same functions and data.
-- 75 tests pass (`python -m pytest`), 5 of them for this module.
+- 87 tests pass (`python -m pytest`), 5 of them for this module.

@@ -4,6 +4,11 @@
 return_features: data/processed/cl_return_features.parquet
 reference_prices: data/processed/cl_minute_reference_prices.parquet
 front_minutes: data/processed/cl_minute_front_contracts.parquet
+# Inputs for the alternative roll rule, as in #29 and #31: return features rebuilt from the minute bars
+# under the existing 3-sessions-before-expiry calendar (#17/#18).
+reference_config: config/prepare_minute.yaml
+roll_comparison: data/processed/cl_minute_roll_comparison.csv
+return_config: config/return_features.yaml
 # Execution, cost and evaluation settings of the strategy backtest (#30) are reused for the trading
 # comparison, so the sign-filtered strategies are priced exactly like the baseline sign-of-ROD strategy.
 strategy_config: config/lh_strategy.yaml
@@ -25,7 +30,8 @@ inference:
 
 categories:
   # The four sign combinations of (ON, DAY) known at 13:00 CT. Days on which either return is exactly
-  # zero (a handful) are reported separately and left out of the four groups.
+  # zero (a handful) are reported separately and left out of every group comparison and regression;
+  # the include_zero_return_days robustness variant codes them as agree = 0 instead.
   agree: ["ON+/DAY+", "ON-/DAY-"]
   disagree: ["ON+/DAY-", "ON-/DAY+"]
 
@@ -39,8 +45,9 @@ grid:
 
 models:
   # Regressions of LH on 13:00 CT information, every one with an intercept. `agree` is 1 when the
-  # ON and DAY signs match. The product ON x DAY is the scalar coherence of the (ON, DAY) vector:
-  # positive and large when both move the same way by a lot.
+  # ON and DAY signs match. The product ON x DAY is positive on every agreement day whatever the common
+  # direction, so its slope measures a nonlinear (sign-symmetric) dependence of LH on the (ON, DAY)
+  # vector; the directional claim rests on sign(ROD) x LH and the agreement interactions.
   rod: [rod]
   rod_by_agreement: [rod, agree, rod_x_agree]
   on_day: ["on", day]
@@ -64,12 +71,18 @@ oos:
   min_train_obs: 500
 
 robustness:
+  # Each variant reruns the group comparison and every model without the matching dates, with the
+  # expanding-window OOS statistics (the exclusions are known in advance, so the forecasts stay
+  # prospective). The script adds the pre-expiry roll rule, log returns and the zero-day coding.
   exclude_2026_03_10: {dates: ["2026-03-10"]}
+  exclude_2022_and_2026: {years: [2022, 2026]}
   exclude_roll_dates: {column: roll_flag}
   exclude_degraded_dates: {column: degraded_date}
   exclude_after_non_trading_days: {column: gap_days, above: 1}
 
-# The pre-registered comparisons: agree-vs-disagree strategy return, the ROD x agree slope, the ON x DAY
-# product slope, and the two ON/DAY x agree slopes. The Bonferroni level is reported next to each p-value.
+# Five defined comparisons, fixed when the script was written and before its results were read, but not
+# registered outside this repository: the agree-vs-disagree strategy return, the ROD x agree slope, the
+# ON x DAY product slope, and the two ON/DAY x agree slopes. The Bonferroni level is reported next to
+# each p-value as an exploratory correction.
 family_tests: 5
 family_level: 0.05

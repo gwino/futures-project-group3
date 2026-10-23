@@ -6,10 +6,13 @@ Run from the repository root, after the return features (#28) and the minute pip
 
 At 13:00 CT the overnight return ON (previous 13:30 -> 08:00) and the daytime return DAY (08:00 ->
 13:00) are known. Days are classified by their signs (ON+/DAY+, ON-/DAY-, ON+/DAY-, ON-/DAY+); the
-first two are agreement, the other two disagreement. The last-half-hour return LH, the direction hit
-rate and the paper's sign-of-ROD strategy return are compared across the groups, with Newey-West
-standard errors. Coherence is also treated as the two-dimensional vector (ON, DAY): the mean LH on a
-grid of ON and DAY quantile bins, and regressions with the product ON x DAY and with agreement
+first two are agreement, the other two disagreement, and the few days on which a return is exactly
+zero are set aside from every group comparison and regression. The last-half-hour return LH, the
+direction hit rate and the paper's sign-of-ROD strategy return are compared across the groups, with
+Newey-West standard errors taken from one regression of the chronological series on group
+indicators, so the lags run over consecutive sample dates. Coherence is also treated as the
+two-dimensional vector (ON, DAY): the mean LH on a grid of ON and DAY quantile bins, and regressions
+with the product ON x DAY (a nonlinear term, not a directional one) and with agreement
 interactions, evaluated in sample and with expanding-window forecasts. Sign-filtered strategies are
 priced with the #30 execution and cost settings.
 
@@ -18,7 +21,8 @@ Outputs (tables in reports/tables, figures in reports/figures):
   strategy return, with standard errors; sign_agreement_grid.csv: the ON x DAY bin grid.
 - sign_agreement_regressions.csv, sign_agreement_oos.csv, sign_agreement_oos_forecasts.csv.
 - sign_agreement_strategies.csv and sign_agreement_strategy_by_year.csv: trading comparison.
-- sign_agreement_by_year.csv and sign_agreement_robustness.csv: stability and excluded dates.
+- sign_agreement_by_year.csv; sign_agreement_robustness*.csv: excluded dates, the pre-expiry roll
+  rule, log returns and the zero-day coding, with out-of-sample statistics per variant.
 - sign_agreement_*.png and sign_agreement.manifest.json.
 """
 
@@ -38,10 +42,10 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from src.analyze_volatility_regimes import wald_p_value
-from src.backtest_lh_strategy import apply_costs, build_ledger, evaluate, next_bar_fills
+from src.backtest_lh_strategy import apply_costs, build_ledger, evaluate, fills
+from src.compare_subperiods import chi2_sf, regression
 from src.prepare_daily_data import sha256
-from src.replicate_regressions import exclusion_mask, expanding_forecasts, hac_covariance, newey_west_lags, normal_cdf, normal_quantile, ols, oos_statistics
+from src.replicate_regressions import exclusion_mask, expanding_forecasts, hac_covariance, newey_west_lags, normal_cdf, normal_quantile, oos_statistics, pre_expiry_features
 
 SURFACE, INK, INK_MUTED, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#e4e3df"
 BLUE, ORANGE, AQUA, YELLOW, RED, VIOLET = "#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e34948", "#6250d6"
@@ -59,8 +63,9 @@ def load_config(path: Path) -> tuple[dict, dict]:
 	with path.open(encoding="utf-8") as config_file:
 		config = yaml.safe_load(config_file)
 	required = {
-		"return_features", "reference_prices", "front_minutes", "strategy_config", "tables_dir", "figures_dir", "target", "components", "rod", "log_variant",
-		"scale", "inference", "categories", "grid", "models", "nested", "strategies", "baseline_strategy", "oos", "robustness", "family_tests", "family_level",
+		"return_features", "reference_prices", "front_minutes", "reference_config", "roll_comparison", "return_config", "strategy_config", "tables_dir", "figures_dir",
+		"target", "components", "rod", "log_variant", "scale", "inference", "categories", "grid", "models", "nested", "strategies", "baseline_strategy", "oos",
+		"robustness", "family_tests", "family_level",
 	}
 	missing = required.difference(config)
 	if missing:
@@ -90,7 +95,12 @@ def classify(frame: pd.DataFrame, on: str, day: str) -> pd.Series:
 
 
 def add_terms(frame: pd.DataFrame, config: dict, labels: dict | None = None) -> pd.DataFrame:
-	"""Columns on, day, rod, agree, the interactions, the strategy return eta and the sign category."""
+	"""Columns on, day, rod, agree, the interactions, the strategy return eta, the hit indicators and the sign category.
+
+	`agree` and `disagree` are 0 on zero-return days; those days are dropped before any regression
+	or group comparison (see regression_sample), so the coding never defines a reference group.
+	The hit indicators are missing when LH is exactly zero, so ties are neither hits nor misses.
+	"""
 	target, components, rod = config["target"], config["components"], config["rod"]
 	if labels is not None:
 		target, components, rod = labels["target"], labels["components"], labels["rod"]
@@ -102,59 +112,95 @@ def add_terms(frame: pd.DataFrame, config: dict, labels: dict | None = None) -> 
 	out["rod_x_agree"], out["on_x_agree"], out["day_x_agree"] = out["rod"] * out["agree"], out["on"] * out["agree"], out["day"] * out["agree"]
 	out["on_x_day"] = out["on"] * out["day"]
 	out["eta"] = np.sign(out["rod"]) * out["y"]
-	out["lh_follows_rod"] = (np.sign(out["y"]) == np.sign(out["rod"])).astype(float)
-	out["lh_follows_day"] = (np.sign(out["y"]) == np.sign(out["day"])).astype(float)
+	tie = out["y"].eq(0)
+	out["lh_follows_rod"] = pd.Series(np.where(tie, np.nan, (np.sign(out["y"]) == np.sign(out["rod"])).astype(float)), index=out.index)
+	out["lh_follows_day"] = pd.Series(np.where(tie, np.nan, (np.sign(out["y"]) == np.sign(out["day"])).astype(float)), index=out.index)
 	return out
+
+
+def regression_sample(frame: pd.DataFrame) -> pd.DataFrame:
+	"""The dates with a sign category: zero-return days are set aside."""
+	return frame[frame["category"].ne("zero")].reset_index(drop=True)
+
+
+def variant_mask(frame: pd.DataFrame, rule: dict) -> pd.Series:
+	"""True for the dates a robustness rule drops: the #29 rules plus a list of calendar years."""
+	if "years" in rule:
+		return frame["trade_date"].dt.year.isin(rule["years"])
+	return exclusion_mask(frame, rule)
 
 
 # --- Group statistics -------------------------------------------------------------------------
 
 
-def mean_with_hac(values: np.ndarray, lags: int) -> tuple[float, float]:
-	"""Mean and its Newey-West standard error (regression on a constant)."""
-	fit = ols(values, np.empty((len(values), 0)), min(lags, len(values) - 2))
-	return float(fit["coefficients"][0]), float(fit["errors"][0])
+def group_means(frame: pd.DataFrame, labels: pd.Series, value: str, lags: int) -> pd.DataFrame:
+	"""Mean of `value` per label with Newey-West standard errors, from one regression on the label indicators.
+
+	The regression runs over the chronological sample with one indicator per label and no intercept,
+	so the coefficients are the group means and the Bartlett lags run over consecutive sample dates
+	rather than over the dates of a single group.
+	"""
+	names = [name for name in pd.unique(labels) if pd.notna(name)]
+	X = np.column_stack([labels.eq(name).to_numpy(dtype=float) for name in names])
+	y = frame[value].to_numpy(dtype=float)
+	coefficients, *_ = np.linalg.lstsq(X, y, rcond=None)
+	covariance = hac_covariance(X, y - X @ coefficients, lags)
+	return pd.DataFrame({"mean": coefficients, "se": np.sqrt(np.diag(covariance))}, index=names)
 
 
-def group_row(frame: pd.DataFrame, lags: int, z: float) -> dict:
-	"""Counts, mean LH, hit rates and the sign-of-ROD strategy return for one group of dates."""
-	n = len(frame)
-	mean_lh, se_lh = mean_with_hac(frame["y"].to_numpy(dtype=float), lags)
-	eta, se_eta = mean_with_hac(frame["eta"].to_numpy(dtype=float), lags)
-	follows = frame["lh_follows_rod"].mean()
-	follows_day = frame["lh_follows_day"].mean()
-	return {
-		"n": n, "mean_lh_bps": mean_lh * 1e4, "se_lh_bps": se_lh * 1e4, "ci_low_lh_bps": (mean_lh - z * se_lh) * 1e4, "ci_high_lh_bps": (mean_lh + z * se_lh) * 1e4,
-		"sd_lh_pct": frame["y"].std() * 100, "mean_rod_pct": frame["rod"].mean() * 100, "mean_on_pct": frame["on"].mean() * 100, "mean_day_pct": frame["day"].mean() * 100,
-		"lh_follows_rod": follows, "lh_follows_rod_se": math.sqrt(follows * (1 - follows) / n) if n else np.nan,
-		"lh_follows_day": follows_day, "lh_follows_day_se": math.sqrt(follows_day * (1 - follows_day) / n) if n else np.nan,
-		"eta_bps": eta * 1e4, "se_eta_bps": se_eta * 1e4, "ci_low_eta_bps": (eta - z * se_eta) * 1e4, "ci_high_eta_bps": (eta + z * se_eta) * 1e4, "t_eta": eta / se_eta if se_eta else np.nan,
-	}
+def hit_rate(values: pd.Series) -> tuple[float, float, int]:
+	"""Share of hits among non-tied days and its binomial standard error."""
+	valid = values.dropna()
+	if valid.empty:
+		return np.nan, np.nan, 0
+	share = valid.mean()
+	return share, math.sqrt(share * (1 - share) / len(valid)), len(valid)
+
+
+def group_statistics(frame: pd.DataFrame, labels: pd.Series, lags: int, z: float) -> dict[str, dict]:
+	"""Counts, mean LH, hit rates and the sign-of-ROD strategy return for each label, keyed by label."""
+	lh, eta = group_means(frame, labels, "y", lags), group_means(frame, labels, "eta", lags)
+	rows = {}
+	for name in lh.index:
+		sub = frame[labels.eq(name)]
+		follows, follows_se, decided = hit_rate(sub["lh_follows_rod"])
+		follows_day, follows_day_se, _ = hit_rate(sub["lh_follows_day"])
+		mean_lh, se_lh, mean_eta, se_eta = lh.loc[name, "mean"], lh.loc[name, "se"], eta.loc[name, "mean"], eta.loc[name, "se"]
+		rows[name] = {
+			"n": len(sub), "mean_lh_bps": mean_lh * 1e4, "se_lh_bps": se_lh * 1e4, "ci_low_lh_bps": (mean_lh - z * se_lh) * 1e4, "ci_high_lh_bps": (mean_lh + z * se_lh) * 1e4,
+			"sd_lh_pct": sub["y"].std() * 100, "mean_rod_pct": sub["rod"].mean() * 100, "mean_on_pct": sub["on"].mean() * 100, "mean_day_pct": sub["day"].mean() * 100,
+			"lh_follows_rod": follows, "lh_follows_rod_se": follows_se, "decided_days": decided, "lh_follows_day": follows_day, "lh_follows_day_se": follows_day_se,
+			"eta_bps": mean_eta * 1e4, "se_eta_bps": se_eta * 1e4, "ci_low_eta_bps": (mean_eta - z * se_eta) * 1e4, "ci_high_eta_bps": (mean_eta + z * se_eta) * 1e4,
+			"t_eta": mean_eta / se_eta if se_eta else np.nan,
+		}
+	return rows
 
 
 def category_table(frame: pd.DataFrame, config: dict, lags: int, z: float) -> pd.DataFrame:
-	"""One row per sign category, the pooled agree and disagree groups, the zero days, and the agree - disagree difference."""
-	rows = []
-	for category in CATEGORY_ORDER:
-		rows.append({"group": category, "kind": "category", **group_row(frame[frame["category"].eq(category)], lags, z)})
-	agree, disagree = frame[frame["agree"].eq(1)], frame[frame["disagree"].eq(1)]
-	rows.append({"group": "agree", "kind": "pooled", **group_row(agree, lags, z)})
-	rows.append({"group": "disagree", "kind": "pooled", **group_row(disagree, lags, z)})
-	zero = frame[frame["category"].eq("zero")]
-	if len(zero) > 2:
-		rows.append({"group": "zero", "kind": "excluded", **group_row(zero, lags, z)})
-	else:
-		rows.append({"group": "zero", "kind": "excluded", "n": len(zero)})
-	# Difference agree - disagree in the strategy return and in the ROD hit rate, from a regression on the indicator.
-	both = frame[frame["category"].ne("zero")]
-	fit = ols(both["eta"].to_numpy(dtype=float), both[["agree"]].to_numpy(dtype=float), lags)
-	diff, se = fit["coefficients"][1], fit["errors"][1]
-	hit_fit = ols(both["lh_follows_rod"].to_numpy(dtype=float), both[["agree"]].to_numpy(dtype=float), lags)
+	"""One row per sign category, the pooled agree and disagree groups, the zero days, and the agree - disagree difference.
+
+	Group means and their HAC standard errors come from indicator regressions on the chronological
+	sample (see group_means). The zero-return days are reported for completeness and take no part in
+	the pooled groups or the difference.
+	"""
+	by_category = group_statistics(frame, frame["category"], lags, z)
+	pooled_labels = pd.Series(np.where(frame["agree"].eq(1), "agree", np.where(frame["disagree"].eq(1), "disagree", "zero")), index=frame.index)
+	pooled = group_statistics(frame, pooled_labels, lags, z)
+	rows = [{"group": category, "kind": "category", **by_category[category]} for category in CATEGORY_ORDER if category in by_category]
+	rows += [{"group": name, "kind": "pooled", **pooled[name]} for name in ("agree", "disagree") if name in pooled]
+	zero_count = int(frame["category"].eq("zero").sum())
+	rows.append({"group": "zero", "kind": "excluded", **(by_category["zero"] if zero_count > 2 else {"n": zero_count})})
+	both = regression_sample(frame)
+	fit = regression(both["eta"].to_numpy(dtype=float), both[["agree"]].to_numpy(dtype=float), lags)
+	diff, se = fit["coefficients"][1], math.sqrt(fit["covariance"][1, 1])
+	decided = both[both["lh_follows_rod"].notna()]
+	hit_fit = regression(decided["lh_follows_rod"].to_numpy(dtype=float), decided[["agree"]].to_numpy(dtype=float), lags)
 	rows.append(
 		{
 			"group": "agree - disagree", "kind": "difference", "n": len(both), "eta_bps": diff * 1e4, "se_eta_bps": se * 1e4,
 			"ci_low_eta_bps": (diff - z * se) * 1e4, "ci_high_eta_bps": (diff + z * se) * 1e4, "t_eta": diff / se, "p_eta": 2 * (1 - normal_cdf(abs(diff / se))),
-			"lh_follows_rod": hit_fit["coefficients"][1], "lh_follows_rod_se": hit_fit["errors"][1], "bonferroni_level": config["family_level"] / config["family_tests"],
+			"lh_follows_rod": hit_fit["coefficients"][1], "lh_follows_rod_se": math.sqrt(hit_fit["covariance"][1, 1]), "decided_days": len(decided),
+			"bonferroni_level": config["family_level"] / config["family_tests"],
 		}
 	)
 	return pd.DataFrame(rows)
@@ -163,22 +209,21 @@ def category_table(frame: pd.DataFrame, config: dict, lags: int, z: float) -> pd
 def grid_table(frame: pd.DataFrame, bins: int, min_cell: int, lags: int, z: float) -> pd.DataFrame:
 	"""Mean LH, its standard error and the count on a grid of ON and DAY quantile bins (the two-dimensional view)."""
 	labels = {3: ["low", "mid", "high"]}.get(bins, [f"q{index + 1}" for index in range(bins)])
-	on_bin = pd.qcut(frame["on"], bins, labels=labels)
-	day_bin = pd.qcut(frame["day"], bins, labels=labels)
+	on_bin = pd.qcut(frame["on"], bins, labels=labels).astype(str)
+	day_bin = pd.qcut(frame["day"], bins, labels=labels).astype(str)
 	edges = {"on": pd.qcut(frame["on"], bins, retbins=True)[1] * 100, "day": pd.qcut(frame["day"], bins, retbins=True)[1] * 100}
+	cells = on_bin + "|" + day_bin
+	stats = group_statistics(frame, cells, lags, z)
 	rows = []
 	for on_label in labels:
 		for day_label in labels:
-			cell = frame[on_bin.eq(on_label) & day_bin.eq(day_label)]
-			mean, se = mean_with_hac(cell["y"].to_numpy(dtype=float), lags) if len(cell) > 2 else (np.nan, np.nan)
-			eta, se_eta = mean_with_hac(cell["eta"].to_numpy(dtype=float), lags) if len(cell) > 2 else (np.nan, np.nan)
+			cell = stats.get(f"{on_label}|{day_label}", {"n": 0})
 			rows.append(
 				{
-					"on_bin": on_label, "day_bin": day_label, "n": len(cell), "sparse": len(cell) < min_cell,
+					"on_bin": on_label, "day_bin": day_label, "n": cell["n"], "sparse": cell["n"] < min_cell,
 					"on_range_pct": f"[{edges['on'][labels.index(on_label)]:.2f}, {edges['on'][labels.index(on_label) + 1]:.2f}]",
 					"day_range_pct": f"[{edges['day'][labels.index(day_label)]:.2f}, {edges['day'][labels.index(day_label) + 1]:.2f}]",
-					"mean_lh_bps": mean * 1e4, "se_lh_bps": se * 1e4, "ci_low_lh_bps": (mean - z * se) * 1e4, "ci_high_lh_bps": (mean + z * se) * 1e4,
-					"eta_bps": eta * 1e4, "se_eta_bps": se_eta * 1e4, "lh_follows_rod": cell["lh_follows_rod"].mean() if len(cell) else np.nan,
+					**{key: cell.get(key, np.nan) for key in ("mean_lh_bps", "se_lh_bps", "ci_low_lh_bps", "ci_high_lh_bps", "eta_bps", "se_eta_bps", "lh_follows_rod")},
 				}
 			)
 	return pd.DataFrame(rows)
@@ -188,30 +233,33 @@ def grid_table(frame: pd.DataFrame, bins: int, min_cell: int, lags: int, z: floa
 
 
 def fit_models(frame: pd.DataFrame, models: dict, lags: int, z: float, scale: float, min_train: int | None, nested: list, variant: str = "baseline") -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-	"""Term table, model-level table (with Wald tests on interaction terms and OOS statistics) and OOS forecasts."""
+	"""Term table, model-level table (with Wald tests on interaction terms and OOS statistics) and OOS forecasts.
+
+	The HAC covariance is computed once per model (compare_subperiods.regression) and used for the
+	standard errors and the Wald test alike.
+	"""
 	y = frame["y"].to_numpy(dtype=float)
 	term_rows, model_rows, forecasts, fitted = [], [], [], {}
 	for model, predictors in models.items():
 		X = frame[predictors].to_numpy(dtype=float)
-		fit = ols(y, X, lags)
-		design = np.column_stack([np.ones(len(y)), X])
-		covariance = hac_covariance(design, y - design @ fit["coefficients"], lags)
+		fit = regression(y, X, lags)
+		errors = np.sqrt(np.diag(fit["covariance"]))
 		terms = ["const", *predictors]
 		stats = {"variant": variant, "model": model, "n": fit["n"], "adj_r2_pct": fit["adj_r2"] * scale, "hac_lags": lags}
 		interactions = [index for index, term in enumerate(terms) if "_x_" in term]
 		if interactions:
 			gamma = fit["coefficients"][interactions]
-			stats["wald_stat"] = float(gamma @ np.linalg.solve(covariance[np.ix_(interactions, interactions)], gamma))
+			stats["wald_stat"] = float(gamma @ np.linalg.solve(fit["covariance"][np.ix_(interactions, interactions)], gamma))
 			stats["wald_df"] = len(interactions)
-			stats["wald_p"] = wald_p_value(stats["wald_stat"], len(interactions))
+			stats["wald_p"] = chi2_sf(stats["wald_stat"], len(interactions))
 		if min_train is not None and len(y) > min_train:
 			rows = expanding_forecasts(y, X, min_train)
 			oos = oos_statistics(rows, lags)
-			stats.update({"oos_forecasts": oos["oos_forecasts"], "oos_r2_pct": oos["oos_r2"] * scale, "clark_west_t": oos["clark_west_t"], "clark_west_p": oos["clark_west_p"]})
+			stats.update({"oos_forecasts": oos["oos_forecasts"], "first_forecast": frame["trade_date"].iloc[min_train].date(), "oos_r2_pct": oos["oos_r2"] * scale, "clark_west_t": oos["clark_west_t"], "clark_west_p": oos["clark_west_p"]})
 			fitted[model] = rows
 			forecasts.append(rows.assign(model=model, trade_date=frame["trade_date"].iloc[rows["position"]].to_numpy()).drop(columns="position"))
 		for index, term in enumerate(terms):
-			coefficient, error = fit["coefficients"][index], fit["errors"][index]
+			coefficient, error = fit["coefficients"][index], errors[index]
 			term_rows.append(
 				{
 					"variant": variant, "model": model, "term": term, "coef_x100": coefficient * scale, "se_x100": error * scale,
@@ -249,14 +297,16 @@ def strategy_positions(frame: pd.DataFrame, spec: dict) -> pd.Series:
 
 
 def trading_tables(frame: pd.DataFrame, references: pd.DataFrame, minutes: pd.DataFrame, config: dict, strategy_cfg: dict, timezone_name: str) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, pd.DataFrame]]:
-	"""Frictionless, gross and net metrics for each sign-filtered strategy, priced like the #30 baseline."""
-	execution, costs = strategy_cfg["execution"], strategy_cfg["costs"]
+	"""Frictionless, gross and net metrics for each sign-filtered strategy, priced with the #30 baseline execution variant and costs."""
+	variant = strategy_cfg["execution_variants"][strategy_cfg["baseline_execution"]]
+	execution = {**strategy_cfg["execution"], **{key: value for key, value in variant.items() if key in ("entry_time", "exit_time", "max_delay_minutes", "settlement_proxy_minutes")}}
+	costs = strategy_cfg["costs"]
 	evaluation = dict(strategy_cfg["evaluation"])
 	evaluation["hac_lags"] = newey_west_lags(len(frame)) if evaluation["hac_lags"] == "auto" else int(evaluation["hac_lags"])
 	refs = references[references["trade_date"].isin(frame["trade_date"])].sort_values("trade_date").reset_index(drop=True)
 	held = refs.set_index("trade_date")["instrument_id"]
-	entry = next_bar_fills(minutes, held, execution["entry_time"], timezone_name, execution["max_delay_minutes"])
-	exit = next_bar_fills(minutes, held, execution["exit_time"], timezone_name, execution["max_delay_minutes"])
+	entry = fills(variant["entry"], execution["entry_time"], refs, minutes, held, timezone_name, execution)
+	exit = fills(variant["exit"], execution["exit_time"], refs, minutes, held, timezone_name, execution)
 	indexed = frame.set_index("trade_date")
 	summary_rows, year_rows, ledgers = [], [], {}
 	for name, spec in config["strategies"].items():
@@ -264,7 +314,7 @@ def trading_tables(frame: pd.DataFrame, references: pd.DataFrame, minutes: pd.Da
 		position.index = refs["trade_date"]
 		predictor = indexed["rod"].reindex(refs["trade_date"])
 		predictor.index = refs["trade_date"]
-		ledger = apply_costs(build_ledger(refs, position, predictor, entry, exit, name, execution), costs["commission_per_side_usd"], costs["slippage_ticks_per_side"], execution)
+		ledger = apply_costs(build_ledger(refs, position, predictor, entry, exit, name, execution), costs["commission_per_side_usd"], costs["slippage_ticks_per_side"], execution, variant.get("exit_slippage_ticks_per_side"))
 		ledgers[name] = ledger
 		for accounting, return_column, pnl_column in (("frictionless", "r_frictionless", None), ("gross", "r_gross", "pnl_gross_usd"), ("net", "r_net", "pnl_net_usd")):
 			summary_rows.append({"strategy": name, "accounting": accounting, **evaluate(ledger, return_column, pnl_column, evaluation)})
@@ -279,11 +329,14 @@ def trading_tables(frame: pd.DataFrame, references: pd.DataFrame, minutes: pd.Da
 def by_year_table(frame: pd.DataFrame, lags: int, z: float) -> pd.DataFrame:
 	rows = []
 	for year, group in frame.groupby(frame["trade_date"].dt.year):
-		for name, mask in (("agree", group["agree"].eq(1)), ("disagree", group["disagree"].eq(1))):
-			rows.append({"year": year, "group": name, **group_row(group[mask], lags, z)})
-		both = group[group["category"].ne("zero")]
-		fit = ols(both["eta"].to_numpy(dtype=float), both[["agree"]].to_numpy(dtype=float), min(lags, len(both) - 3))
-		rows.append({"year": year, "group": "agree - disagree", "n": len(both), "eta_bps": fit["coefficients"][1] * 1e4, "se_eta_bps": fit["errors"][1] * 1e4, "t_eta": fit["coefficients"][1] / fit["errors"][1]})
+		group = group.reset_index(drop=True)
+		labels = pd.Series(np.where(group["agree"].eq(1), "agree", np.where(group["disagree"].eq(1), "disagree", "zero")), index=group.index)
+		stats = group_statistics(group, labels, min(lags, len(group) - 4), z)
+		rows += [{"year": year, "group": name, **stats[name]} for name in ("agree", "disagree") if name in stats]
+		both = regression_sample(group)
+		fit = regression(both["eta"].to_numpy(dtype=float), both[["agree"]].to_numpy(dtype=float), min(lags, len(both) - 3))
+		se = math.sqrt(fit["covariance"][1, 1])
+		rows.append({"year": year, "group": "agree - disagree", "n": len(both), "eta_bps": fit["coefficients"][1] * 1e4, "se_eta_bps": se * 1e4, "t_eta": fit["coefficients"][1] / se})
 	return pd.DataFrame(rows)
 
 
@@ -309,7 +362,6 @@ def figure_categories(categories: pd.DataFrame, path: Path) -> None:
 	rows = table.loc[CATEGORY_ORDER]
 	for position, (color, (_, row)) in enumerate(zip(colors, rows.iterrows())):
 		left.errorbar(position, row["mean_lh_bps"], yerr=[[row["mean_lh_bps"] - row["ci_low_lh_bps"]], [row["ci_high_lh_bps"] - row["mean_lh_bps"]]], fmt="o", color=color, markersize=7, elinewidth=1.8, capsize=4)
-	for position, (label, row) in enumerate(rows.iterrows()):
 		left.annotate(f"n = {int(row['n'])}", (position, row["ci_low_lh_bps"]), xytext=(0, -14), textcoords="offset points", ha="center", color=INK_MUTED, fontsize=8)
 	left.axhline(0, color=INK_MUTED, linewidth=0.8)
 	left.set_xticks(x, CATEGORY_ORDER)
@@ -413,31 +465,42 @@ def main() -> int:
 	sample = features[features["sample"]].sort_values("trade_date").reset_index(drop=True)
 	lags = newey_west_lags(len(sample)) if config["inference"]["hac_lags"] == "auto" else int(config["inference"]["hac_lags"])
 	frame = add_terms(sample, config)
+	regression_frame = regression_sample(frame)
 
 	categories = category_table(frame, config, lags, z)
-	grid = grid_table(frame[frame["category"].ne("zero")], config["grid"]["bins"], config["grid"]["min_cell"], lags, z)
-	terms, models, forecasts = fit_models(frame, config["models"], lags, z, scale, min_train, config["nested"])
+	grid = grid_table(regression_frame, config["grid"]["bins"], config["grid"]["min_cell"], lags, z)
+	terms, models, forecasts = fit_models(regression_frame, config["models"], lags, z, scale, min_train, config["nested"])
 	by_year = by_year_table(frame, lags, z)
 
-	# Robustness: excluded dates and log returns, for the group comparison and the interaction models.
+	# Robustness: excluded dates, the pre-expiry roll rule, log returns, and the zero-day coding; each with
+	# the group comparison and the models, with expanding-window OOS where the variant is prospective.
 	robust_groups, robust_terms, robust_models = [], [], []
-	for name, rule in config["robustness"].items():
-		kept = frame[~exclusion_mask(frame, rule)].reset_index(drop=True)
-		robust_groups.append(category_table(kept, config, lags, z).assign(variant=f"exclude:{name}", dropped=len(frame) - len(kept)))
-		rt, rm, _ = fit_models(kept, config["models"], lags, z, scale, None, config["nested"], variant=f"exclude:{name}")
+
+	def run_variant(name: str, variant_frame: pd.DataFrame, dropped: int, oos: bool = True) -> None:
+		robust_groups.append(category_table(variant_frame, config, lags, z).assign(variant=name, dropped=dropped))
+		rt, rm, _ = fit_models(regression_sample(variant_frame), config["models"], lags, z, scale, min_train if oos else None, config["nested"], variant=name)
 		robust_terms.append(rt)
-		robust_models.append(rm)
-	log_frame = add_terms(sample, config, labels=config["log_variant"])
-	robust_groups.append(category_table(log_frame, config, lags, z).assign(variant="log_returns", dropped=0))
-	rt, rm, _ = fit_models(log_frame, config["models"], lags, z, scale, None, config["nested"], variant="log_returns")
+		robust_models.append(rm.assign(dropped=dropped))
+
+	for name, rule in config["robustness"].items():
+		drop = variant_mask(frame, rule)
+		run_variant(f"exclude:{name}", frame[~drop].reset_index(drop=True), int(drop.sum()), oos="abs_quantile_above" not in rule)
+	alternative = pre_expiry_features({key: config[key] for key in ("reference_config", "front_minutes", "roll_comparison", "return_config")}, features)
+	alternative = alternative[alternative["sample"]].sort_values("trade_date").reset_index(drop=True)
+	changed = int(alternative.set_index("trade_date")["contract_id"].ne(sample.set_index("trade_date")["contract_id"]).sum())
+	run_variant("pre_expiry_roll_3_sessions", add_terms(alternative, config), len(sample) - len(alternative))
+	run_variant("log_returns", add_terms(sample, config, labels=config["log_variant"]), 0)
+	# The zero-return days coded as agree = 0 (the reference group is then disagreement plus zero days).
+	rt, rm, _ = fit_models(frame, config["models"], lags, z, scale, min_train, config["nested"], variant="include_zero_return_days")
 	robust_terms.append(rt)
-	robust_models.append(rm)
+	robust_models.append(rm.assign(dropped=0))
 	robustness = pd.concat(robust_groups, ignore_index=True)
 	robustness_terms = pd.concat(robust_terms, ignore_index=True)
+	robustness_models = pd.concat(robust_models, ignore_index=True)
 
 	# Trading comparison with the #30 execution and costs.
 	references = pd.read_parquet(config["reference_prices"])
-	minutes = pd.read_parquet(config["front_minutes"], columns=["ts_utc", "instrument_id", "open"])
+	minutes = pd.read_parquet(config["front_minutes"], columns=["ts_utc", "instrument_id", "open", "high", "low", "close", "volume"])
 	with Path(strategy_cfg["minute_config"]).open(encoding="utf-8") as minute_file:
 		timezone_name = yaml.safe_load(minute_file)["session"]["timezone"]
 	strategies, strategy_by_year, ledgers = trading_tables(frame, references, minutes, config, strategy_cfg, timezone_name)
@@ -447,12 +510,13 @@ def main() -> int:
 		"models": tables_dir / "sign_agreement_oos.csv", "oos_forecasts": tables_dir / "sign_agreement_oos_forecasts.csv", "strategies": tables_dir / "sign_agreement_strategies.csv",
 		"strategy_by_year": tables_dir / "sign_agreement_strategy_by_year.csv", "by_year": tables_dir / "sign_agreement_by_year.csv",
 		"robustness": tables_dir / "sign_agreement_robustness.csv", "robustness_regressions": tables_dir / "sign_agreement_robustness_regressions.csv",
+		"robustness_models": tables_dir / "sign_agreement_robustness_models.csv",
 		"figure_categories": figures_dir / "sign_agreement_categories.png", "figure_grid": figures_dir / "sign_agreement_grid.png",
 		"figure_by_year": figures_dir / "sign_agreement_by_year.png", "figure_cumulative": figures_dir / "sign_agreement_cumulative.png",
 	}
 	tables = {
 		"categories": categories, "grid": grid, "regressions": terms, "models": models, "oos_forecasts": forecasts, "strategies": strategies,
-		"strategy_by_year": strategy_by_year, "by_year": by_year, "robustness": robustness, "robustness_regressions": robustness_terms,
+		"strategy_by_year": strategy_by_year, "by_year": by_year, "robustness": robustness, "robustness_regressions": robustness_terms, "robustness_models": robustness_models,
 	}
 	for name, table in tables.items():
 		table.to_csv(outputs[name], index=False, float_format="%.6g")
@@ -463,22 +527,27 @@ def main() -> int:
 
 	difference = categories[categories["group"].eq("agree - disagree")].iloc[0]
 	manifest = {
-		"config": str(args.config), "settings": config, "strategy_settings": {key: strategy_cfg[key] for key in ("execution", "costs", "evaluation")}, "hac_lags_used": lags,
-		"sample": {"observations": len(sample), "dates": f"{sample['trade_date'].iloc[0].date()} to {sample['trade_date'].iloc[-1].date()}", "zero_return_days": int(frame["category"].eq("zero").sum()), "first_oos_forecast": str(sample["trade_date"].iloc[min_train].date())},
-		"category_counts": frame["category"].value_counts().to_dict(), "bonferroni_level": config["family_level"] / config["family_tests"],
-		"inputs": {name: {"file": config[name], "sha256": sha256(Path(config[name]))} for name in ("return_features", "reference_prices", "front_minutes")},
+		"config": str(args.config), "settings": config, "strategy_settings": {key: strategy_cfg[key] for key in ("execution", "costs", "evaluation", "baseline_execution")}, "hac_lags_used": lags,
+		"sample": {
+			"observations": len(sample), "dates": f"{sample['trade_date'].iloc[0].date()} to {sample['trade_date'].iloc[-1].date()}", "zero_return_days": int(frame["category"].eq("zero").sum()),
+			"regression_observations": len(regression_frame), "lh_zero_days": int(frame["y"].eq(0).sum()), "first_oos_forecast": str(regression_frame["trade_date"].iloc[min_train].date()),
+		},
+		"category_counts": frame["category"].value_counts().to_dict(), "bonferroni_level": config["family_level"] / config["family_tests"], "pre_expiry_roll_contract_changed_dates": changed,
+		"inputs": {name: {"file": config[name], "sha256": sha256(Path(config[name]))} for name in ("return_features", "reference_prices", "front_minutes", "roll_comparison")},
 		"outputs": {name: {"file": str(path), "sha256": sha256(path)} for name, path in outputs.items()},
 		"created_at_utc": datetime.now(timezone.utc).isoformat(), "python": platform.python_version(), "pandas": pd.__version__, "numpy": np.__version__,
 	}
 	(tables_dir / "sign_agreement.manifest.json").write_text(json.dumps(manifest, indent=2, default=str) + "\n", encoding="utf-8")
 
 	with pd.option_context("display.width", 220, "display.float_format", "{:.3f}".format):
-		print(f"Sample {manifest['sample']['dates']}, n = {len(sample)}, Newey-West lags = {lags}, zero-return days {manifest['sample']['zero_return_days']}\n")
+		print(f"Sample {manifest['sample']['dates']}, n = {len(sample)}, Newey-West lags = {lags}, zero-return days {manifest['sample']['zero_return_days']} (set aside), LH = 0 on {manifest['sample']['lh_zero_days']} days (no hit, no miss)\n")
 		print(categories[["group", "n", "mean_lh_bps", "se_lh_bps", "lh_follows_rod", "eta_bps", "se_eta_bps", "t_eta"]].to_string(index=False))
 		print(f"\nAgree - disagree strategy return: {difference['eta_bps']:.2f} bps (SE {difference['se_eta_bps']:.2f}, p = {difference['p_eta']:.3f}, Bonferroni level {manifest['bonferroni_level']:.3f})\n")
 		print(terms[terms["term"].str.contains("_x_")][["model", "term", "coef_x100", "se_x100", "t_stat", "p_value"]].to_string(index=False))
 		print()
 		print(models[["model", "adj_r2_pct", "wald_p", "oos_r2_pct", "clark_west_p", "nested_in", "oos_r2_vs_nested_pct", "clark_west_p_vs_nested"]].to_string(index=False))
+		print()
+		print(robustness_models[robustness_models["model"].eq("rod_by_agreement")][["variant", "dropped", "n", "oos_r2_pct", "clark_west_p", "oos_r2_vs_nested_pct", "clark_west_p_vs_nested"]].to_string(index=False))
 		print()
 		print(strategies[strategies["accounting"].eq("net")][["strategy", "traded_days", "mean_bps", "se_hac_bps", "sharpe", "hit_rate", "total_pnl_usd"]].to_string(index=False))
 	print(f"\nSaved tables to {tables_dir}/, figures to {figures_dir}/")

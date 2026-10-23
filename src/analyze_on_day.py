@@ -246,28 +246,31 @@ def main() -> int:
 	sensitivity = pd.DataFrame(sensitivity)
 
 	# Robustness: HAC lags, log returns, the pre-expiry roll rule, excluded dates.
-	robust_terms, robust_models = [terms], [models]
+	robust_terms, robust_models = [terms], [models.assign(dropped=0, oos_note="")]
 	for other in config["inference"]["sensitivity_lags"]:
 		if other != lags:
 			rt, rm, _ = fit_models(sample, config, other, z, None, variant=f"hac_lags_{other}")
 			robust_terms.append(rt)
-			robust_models.append(rm.assign(dropped=0))
+			robust_models.append(rm.assign(dropped=0, oos_note=""))
 	log_sample = prepare(sample_features, config["log_variant"]["target"], config["log_variant"]["predictors"])
 	rt, rm, _ = fit_models(log_sample, config, lags, z, min_train, variant="log_returns")
 	robust_terms.append(rt)
-	robust_models.append(rm.assign(dropped=0))
+	robust_models.append(rm.assign(dropped=0, oos_note=""))
 	alternative = pre_expiry_features(config, features)
 	alternative = alternative[alternative["sample"]].sort_values("trade_date").reset_index(drop=True)
 	changed = int(alternative.set_index("trade_date")["contract_id"].ne(sample_features.set_index("trade_date")["contract_id"]).sum())
 	rt, rm, _ = fit_models(prepare(alternative, config["target"], config["predictors"]), config, lags, z, min_train, variant="pre_expiry_roll_3_sessions")
 	robust_terms.append(rt)
-	robust_models.append(rm.assign(dropped=len(sample) - len(alternative), contract_changed_dates=changed))
+	robust_models.append(rm.assign(dropped=len(sample) - len(alternative), contract_changed_dates=changed, oos_note=""))
 	for name, rule in config["robustness"].items():
 		drop = exclusion_mask(sample_features, rule)
 		kept = prepare(sample_features[~drop].reset_index(drop=True), config["target"], config["predictors"])
-		rt, rm, _ = fit_models(kept, config, lags, z, min_train, variant=name)
+		# A quantile rule uses the full sample to pick its dates, so forecasts on the remaining dates would
+		# not be prospective; the OOS statistics are omitted for those variants.
+		prospective = "abs_quantile_above" not in rule
+		rt, rm, _ = fit_models(kept, config, lags, z, min_train if prospective else None, variant=name)
 		robust_terms.append(rt)
-		robust_models.append(rm.assign(dropped=int(drop.sum())))
+		robust_models.append(rm.assign(dropped=int(drop.sum()), oos_note="" if prospective else "omitted: dates chosen with a full-sample threshold"))
 	robustness = pd.concat(robust_terms, ignore_index=True)
 	robustness_models = pd.concat(robust_models, ignore_index=True)
 	robustness_models["dropped"] = robustness_models["dropped"].fillna(0).astype(int)

@@ -4,6 +4,9 @@
     "return_features": "data/processed/cl_return_features.parquet",
     "reference_prices": "data/processed/cl_minute_reference_prices.parquet",
     "front_minutes": "data/processed/cl_minute_front_contracts.parquet",
+    "reference_config": "config/prepare_minute.yaml",
+    "roll_comparison": "data/processed/cl_minute_roll_comparison.csv",
+    "return_config": "config/return_features.yaml",
     "strategy_config": "config/lh_strategy.yaml",
     "tables_dir": "reports/tables",
     "figures_dir": "reports/figures",
@@ -109,6 +112,12 @@
           "2026-03-10"
         ]
       },
+      "exclude_2022_and_2026": {
+        "years": [
+          2022,
+          2026
+        ]
+      },
       "exclude_roll_dates": {
         "column": "roll_flag"
       },
@@ -159,14 +168,17 @@
       "rolling_window": 252,
       "worst_days": 10,
       "adverse_loss_usd": 500
-    }
+    },
+    "baseline_execution": "next_bar_open"
   },
   "hac_lags_used": 7,
   "sample": {
     "observations": 1436,
     "dates": "2021-01-04 to 2026-10-07",
     "zero_return_days": 12,
-    "first_oos_forecast": "2023-01-04"
+    "regression_observations": 1424,
+    "lh_zero_days": 21,
+    "first_oos_forecast": "2023-01-06"
   },
   "category_counts": {
     "ON+/DAY+": 415,
@@ -176,6 +188,7 @@
     "zero": 12
   },
   "bonferroni_level": 0.01,
+  "pre_expiry_roll_contract_changed_dates": 127,
   "inputs": {
     "return_features": {
       "file": "data/processed/cl_return_features.parquet",
@@ -188,28 +201,32 @@
     "front_minutes": {
       "file": "data/processed/cl_minute_front_contracts.parquet",
       "sha256": "c124ee2ed5ea14fd6fc9bc3e6d4c122e4ead90528efc28bb5949b8ad9ed2d95d"
+    },
+    "roll_comparison": {
+      "file": "data/processed/cl_minute_roll_comparison.csv",
+      "sha256": "0730f7ca60e4c60d1a30aa423f1b483cee50b4d6c18aeb313a03d34b2a28b68c"
     }
   },
   "outputs": {
     "categories": {
       "file": "reports\\tables\\sign_agreement_categories.csv",
-      "sha256": "bffc1cf071d01d92a41888b79e9ab99ec6dcb0efc76db4e03c9146e5f6d74eb5"
+      "sha256": "778dd0f9ba47752b74be2c49809585a1e2650c00666d5c2fb4910b643f3a9615"
     },
     "grid": {
       "file": "reports\\tables\\sign_agreement_grid.csv",
-      "sha256": "9ee7a3611d4e52fb83f98b8197712f7fb56fadc4a1fe844481b1ceba3aad263e"
+      "sha256": "cad6bb96b60dc553bb6a545467803da615f833d2e4b248718af6c537050f7aa1"
     },
     "regressions": {
       "file": "reports\\tables\\sign_agreement_regressions.csv",
-      "sha256": "973c71159b6bea80a256d4cb4a006ae3635ca29abee8704830b8774cade54e86"
+      "sha256": "ccca648602d20233badf9af85aa9f5ec720cd754af1585ae18d59d7664cccf82"
     },
     "models": {
       "file": "reports\\tables\\sign_agreement_oos.csv",
-      "sha256": "bb3f7deee299a5f40e48233354cbe65087c0f2de66795596e091877ed08218dd"
+      "sha256": "0a9e0193fa20b345345666dc0542d1c86d3d0a5d2cfb7c49e11f872bccc255f2"
     },
     "oos_forecasts": {
       "file": "reports\\tables\\sign_agreement_oos_forecasts.csv",
-      "sha256": "61c4e8726882474f79b24db06a88fdc9e1446c7815ad89acd5203e0b523b4b00"
+      "sha256": "d451c3d0f6f6e9d7a59e71513ec08985f5fa395c982e66d94000753c6f2977b2"
     },
     "strategies": {
       "file": "reports\\tables\\sign_agreement_strategies.csv",
@@ -221,34 +238,38 @@
     },
     "by_year": {
       "file": "reports\\tables\\sign_agreement_by_year.csv",
-      "sha256": "e601e43a347963dd9f26306722127f2dab517b3a3b2f1b294e986a2fc45282f2"
+      "sha256": "906956b22f371f6629f8dfe185a6e0acca7157aab1b5413e3d86e90789cbd325"
     },
     "robustness": {
       "file": "reports\\tables\\sign_agreement_robustness.csv",
-      "sha256": "4a7320128c128a9f5b9f9d978f678ebb32d182fef2dc6f79c24d2c1b216ad46f"
+      "sha256": "ba1641e57cfd280907ad3dd5fbe5da5c085b3a8135ed0b37b5a2a1f20107e4f6"
     },
     "robustness_regressions": {
       "file": "reports\\tables\\sign_agreement_robustness_regressions.csv",
-      "sha256": "51ba49a6a36730a62899f4c04b590f94ba3e810174da6c2fdef235b2193d3484"
+      "sha256": "1fc64ae3223bec09b4b9c05b56214315a93736586c5c51aa885515e968f7e780"
+    },
+    "robustness_models": {
+      "file": "reports\\tables\\sign_agreement_robustness_models.csv",
+      "sha256": "ba7bf66f7fe1122f9b6c93752016213cd97bb1efc9070661599197ed2b55ceef"
     },
     "figure_categories": {
       "file": "reports\\figures\\sign_agreement_categories.png",
-      "sha256": "60b00d6e410fa836a3869302bfaa1225327cef655c3814682ae1a29a31295d24"
+      "sha256": "6779453224f41dca55f1237f3c8fdfb77c33cf82af4f2053c5a2b1bf38bce1c8"
     },
     "figure_grid": {
       "file": "reports\\figures\\sign_agreement_grid.png",
-      "sha256": "9a00d81db9fa9fed7b94b8fae4fe90bb62de3d16a996bbc1351b7e83b7fa7313"
+      "sha256": "219dc2cfe19cd955d0a6bad15fa7c43be4d2fc4089741615315d4ed22a6f4981"
     },
     "figure_by_year": {
       "file": "reports\\figures\\sign_agreement_by_year.png",
-      "sha256": "d2feabc95ea91ec6751a0a18dd2259a85e6b46d178d75df261bde2fb8c7bafea"
+      "sha256": "f85daa78958d9f9bbc5b4feda81f3f0d4c6df5337f0254fd883e7ee3d70aba3b"
     },
     "figure_cumulative": {
       "file": "reports\\figures\\sign_agreement_cumulative.png",
       "sha256": "3471d8dda9a8d922c205056c586089aa2d24b868e229d5a0c1fa5796010dc7b6"
     }
   },
-  "created_at_utc": "2026-10-23T17:38:17.438075+00:00",
+  "created_at_utc": "2026-10-23T19:47:13.684683+00:00",
   "python": "3.11.9",
   "pandas": "2.2.3",
   "numpy": "2.1.3"

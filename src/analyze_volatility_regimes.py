@@ -39,6 +39,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from src.compare_subperiods import chi2_sf
 from src.prepare_daily_data import sha256
 from src.replicate_regressions import exclusion_mask, expanding_forecasts, hac_covariance, newey_west_lags, normal_cdf, normal_quantile, ols, oos_statistics
 
@@ -101,12 +102,8 @@ def regime_labels(measure: pd.Series, spec: dict) -> pd.DataFrame:
 
 
 def wald_p_value(statistic: float, df: int) -> float:
-	"""Upper tail of a chi-square with 1 or 2 degrees of freedom (closed forms; no scipy)."""
-	if df == 1:
-		return 2 * (1 - normal_cdf(math.sqrt(statistic)))
-	if df == 2:
-		return math.exp(-statistic / 2)
-	raise ValueError("Only 1 or 2 degrees of freedom are supported.")
+	"""Upper tail of a chi-square with any integer degrees of freedom (closed forms from #38; no scipy)."""
+	return chi2_sf(statistic, df)
 
 
 def interaction_design(sample: pd.DataFrame, predictors: dict, regime_column: str | None) -> tuple[np.ndarray, list[str]]:

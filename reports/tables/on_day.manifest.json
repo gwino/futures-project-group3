@@ -170,7 +170,7 @@
     },
     "robustness_models": {
       "file": "reports\\tables\\on_day_robustness_models.csv",
-      "sha256": "64f7ae5ffec02271831f69df008f441ba121dc522eb39b5a8196bb968e1c2c64"
+      "sha256": "10bf131478cdf8549aa747d2d8dd397cbf3b8e80f674870350cb685dfe0cf24c"
     },
     "figure_slopes": {
       "file": "reports\\figures\\on_day_slopes.png",
@@ -185,7 +185,7 @@
       "sha256": "e2d3b7071d521f9a75184e6cbfa81eec4e3f2af655ac3dcb9bf80ea354b0e66a"
     }
   },
-  "created_at_utc": "2026-10-23T17:51:05.170354+00:00",
+  "created_at_utc": "2026-10-23T19:47:33.384558+00:00",
   "python": "3.11.9",
   "pandas": "2.2.3",
   "numpy": "2.1.3"

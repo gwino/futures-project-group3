@@ -2,7 +2,7 @@
 
 Group 3, FINM 37000 Futures and Related Derivatives. Draft of the final project report (#33). Every number below is read from a saved table in `reports/tables/` produced by a script in `src/` from a configuration in `config/`; the "Where it comes from" column of each results table names the file. Section 8 gives the commands that regenerate everything.
 
-> **Status.** All six result sections are written. Sections 4.1 to 4.5 read from tables merged on main (#29, #30, #31, #32, #33); Section 4.6 reads from the tables of PR #39 (#38), which is under review, so its file names resolve once that PR merges.
+> **Status.** All six result sections are written. Sections 4.1, 4.2, 4.4 and 4.6 read from tables on main (#29, #30, #32, #38); Sections 4.3 and 4.5 read from the tables added by the pull request that carries this report (#31, #33). The report is a draft for the team to edit.
 
 ## 1. Question and answer in brief
 
@@ -16,10 +16,10 @@ We ask four things about CL from January 2021 to October 2026, using one-minute 
 | Can the sign of ROD be traded in the last half hour? | #30 | **No.** Before costs the strategy earns −1.2 basis points a day (SE 1.3); with USD 15 of costs per round trip, −3.1 (1.3) and a Sharpe ratio of −1.1. No cost assumption makes it profitable because the gross return is already negative. |
 | Do overnight and daytime returns predict differently? | #31 | **No.** In LH ~ ON + DAY the slopes × 100 are −1.26 (1.01) and −1.84 (1.43); the difference is 0.58 (1.43), p = 0.69. Splitting ROD adds nothing in or out of sample: the joint model's OOS R² (−0.29%) is below ROD's (0.37%), and only DAY alone (0.12%) beats the historical mean, insignificantly. |
 | Does the relationship change in high-volatility regimes? | #32 | **No measurable change.** The ON and DAY slopes are more negative on high-volatility days, but the differences (−1.0 (1.8) and −1.8 (2.9)) are far from significant and the interaction models forecast worse out of sample. |
-| Does agreement between the overnight and daytime directions matter? | #33 | **Yes, and in the opposite direction to the paper's story.** When ON and DAY agree, the last half hour reverses: the paper's strategy earns −4.5 (1.7) basis points on agreement days against +1.9 (1.8) on disagreement days, difference −6.4 (2.3), p = 0.007 (Bonferroni level 0.010). The interaction raises the out-of-sample R² from 0.37% to 0.75% (Clark-West p = 0.05). The effect is concentrated in the two high-volatility years, 2022 and 2026. |
+| Does agreement between the overnight and daytime directions matter? | #33 | **Yes in sample, and in the opposite direction to the paper's story; the evidence is tied to 2022 and 2026.** When ON and DAY agree, the last half hour reverses: the paper's strategy earns −4.5 (1.7) basis points on agreement days against +1.9 (1.7) on disagreement days, difference −6.4 (2.3), p = 0.007 (exploratory Bonferroni level 0.010 for five defined comparisons). The agreement interaction raises the out-of-sample R² from 0.43% to 0.82% (Clark-West p = 0.05), but only with 10 March 2026 in the sample: without that day the OOS R² is −0.47% (p = 0.11). The in-sample difference survives that exclusion (−5.7 (2.3)) and disappears without 2022 and 2026 together (−1.4 (2.3)). |
 | Did the relationship differ between 2021–2023 and 2024–2026? | #38 | **No.** The ROD slope × 100 is −0.79 [−2.74, 1.17] in 2021–2023 and −2.06 [−5.16, 1.04] in 2024–2026; the change, −1.27 (1.87), has p = 0.50, and no model is significant in either period. The one change near 5% (the M slope, p = 0.051) is not robust. What does shift is the level: the average last-half-hour return moves from about −3.7 to +1.4 basis points. |
 
-The overall picture: in post-2020 CL there is no intraday momentum to replicate, no tradable strategy, and the one new regularity we find is a **reversal on unambiguous days** that is statistically modest and tied to crisis years. These are null and negative findings, and the project's success criterion (reproducible results that a teammate can regenerate) does not depend on the sign of the result.
+The overall picture: in post-2020 CL there is no intraday momentum to replicate, no tradable strategy, and the one new regularity we find is a **reversal on unambiguous days** that is statistically modest, tied to the two crisis years, and dependent on one day for its out-of-sample support. These are null and negative findings, and the project's success criterion (reproducible results that a teammate can regenerate) does not depend on the sign of the result.
 
 ## 2. Data
 
@@ -130,20 +130,20 @@ A date is high volatility when its realized variance (previous 13:30 → 13:00 C
 
 ### 4.5 Sign agreement between overnight and daytime returns (#33)
 
-At 13:00 CT the signs of ON and DAY classify each day as agreement (ON+/DAY+, ON−/DAY−; 720 days) or disagreement (ON+/DAY−, ON−/DAY+; 704 days); 12 zero-return days are set aside. The paper's strategy return η = sign(ROD)·LH, in basis points with HAC standard errors. Where it comes from: `sign_agreement_categories.csv`, `sign_agreement_regressions.csv`, `sign_agreement_oos.csv`, `sign_agreement_strategies.csv`.
+At 13:00 CT the signs of ON and DAY classify each day as agreement (ON+/DAY+, ON−/DAY−; 720 days) or disagreement (ON+/DAY−, ON−/DAY+; 704 days); the 12 days with a zero return are set aside from every comparison and regression. The paper's strategy return η = sign(ROD)·LH, in basis points, with Newey-West standard errors from one regression of the chronological series on group indicators (so the lags run over consecutive dates). Hit rates exclude the 21 days with LH exactly zero. Where it comes from: `sign_agreement_categories.csv`, `sign_agreement_regressions.csv`, `sign_agreement_oos.csv`, `sign_agreement_robustness_models.csv`, `sign_agreement_strategies.csv`.
 
 | Group | n | Mean LH (SE) | η = sign(ROD)·LH (SE) | LH follows ROD |
 |---|---|---|---|---|
-| ON+/DAY+ | 415 | −4.11 (1.90) | −4.11 (1.90) | 0.470 |
-| ON−/DAY− | 305 | 4.99 (3.06) | −5.00 (3.06) | 0.469 |
-| ON+/DAY− | 377 | −3.69 (2.29) | 2.10 (2.32) | 0.509 |
-| ON−/DAY+ | 327 | −1.07 (2.48) | 1.62 (2.43) | 0.462 |
-| Agreement − disagreement | 1,424 | | **−6.36 (2.34)**, p = 0.007 | −0.018 |
+| ON+/DAY+ | 415 | −4.11 (1.94) | −4.11 (1.94) | 0.477 |
+| ON−/DAY− | 305 | 5.00 (3.01) | −5.00 (3.01) | 0.470 |
+| ON+/DAY− | 377 | −3.69 (2.30) | 2.10 (2.34) | 0.515 |
+| ON−/DAY+ | 327 | −1.07 (2.42) | 1.62 (2.39) | 0.476 |
+| Agreement − disagreement | 1,424 | | **−6.36 (2.34)**, p = 0.007 | −0.023 (0.025) |
 
 - On agreement days the close moves against the day; on disagreement days the mean LH carries no information about the sign of ROD. Hit rates stay near one half in every group: the difference is in the size of the moves.
-- The two-dimensional view asked for in the check-in gives the same answer without a threshold: the product ON×DAY enters LH ~ ON + DAY + ON×DAY with slope × 100 of 108 (47), and on the ON × DAY tercile grid the agreement corners are the most negative strategy cells (ON high/DAY high −5.6 basis points of LH, ON low/DAY low +6.9). The effect sits in the daytime leg: the DAY slope is +3.6 (1.5) on disagreement days and −6.5 on agreement days (DAY×Agree −10.1 (3.4)).
-- Out of sample, LH ~ ROD + Agree + ROD×Agree is the only model in the project that improves on the paper's ROD model: OOS R² 0.75% against the historical mean (Clark-West p = 0.052) and 0.38% against the nested ROD model (p = 0.056).
-- The result does not depend on one day or on the roll rule (difference between −5.7 and −7.2 under every exclusion), but it is a 2022 and 2026 result: −21 (8) and −12 (7) basis points in those years, within ±6 of zero in the others.
+- The two-dimensional view asked for in the check-in points the same way. The product ON×DAY enters LH ~ ON + DAY + ON×DAY with slope × 100 of 108 (47); since the product is positive on agreement days of either direction, this is a nonlinear, sign-symmetric dependence rather than a directional reversal statistic. Read through η on the ON × DAY tercile grid, the strategy loses most in the ON mid/DAY high cell (−7.1 (3.1)) and in the two agreement corners (−6.9 (4.7) and −5.6 (3.8)). The directional effect sits in the daytime leg: the DAY slope is +3.5 (1.5) on disagreement days and −6.5 on agreement days (DAY×Agree −10.0 (3.5)).
+- Out of sample, LH ~ ROD + Agree + ROD×Agree is the only model in the project that improves on the paper's ROD model: OOS R² 0.82% against the historical mean (Clark-West p = 0.051) and 0.38% against the nested ROD model (p = 0.059). The gain depends on 10 March 2026, a both-negative agreement day with a +4.6% reversal: without it the OOS R² is −0.47% (p = 0.11).
+- In sample the difference is between −5.7 and −7.2 under every single exclusion, the pre-expiry roll rule and log returns, and is the same whether the zero-return days are set aside or coded as disagreement. It is a 2022 and 2026 result: −21 (8) and −12 (7) basis points in those years, within ±6 of zero in the others, and −1.4 (2.3) when both years are dropped.
 - Trading the sign of ROD only on disagreement days is flat after costs (−0.08 (0.84) basis points, USD +3,055) where the unfiltered baseline loses USD 31,095; the filter is chosen with hindsight and does not create a profit.
 
 ![Sign categories](figures/sign_agreement_categories.png)
@@ -152,7 +152,7 @@ At 13:00 CT the signs of ON and DAY classify each day as agreement (ON+/DAY+, ON
 
 ### 4.6 Subperiods 2021–2023 versus 2024–2026 (#38)
 
-The three paper specifications re-estimated on two nonoverlapping periods of the #29 sample, 2021–2023 (747 dates) and 2024–2026 (689 dates), with the common 7 Newey-West lags. The change in each slope is tested in one pooled regression with a period indicator and its interactions, so a slope that is significant in one period and not the other is never read as a difference. Slopes × 100 with 95% intervals. Where it comes from: `replication_subperiods.csv`, `replication_subperiod_fit.csv`, `replication_subperiod_differences.csv` (PR #39).
+The three paper specifications re-estimated on two nonoverlapping periods of the #29 sample, 2021–2023 (747 dates) and 2024–2026 (689 dates), with the common 7 Newey-West lags. The change in each slope is tested in one pooled regression with a period indicator and its interactions, so a slope that is significant in one period and not the other is never read as a difference. Slopes × 100 with 95% intervals. Where it comes from: `replication_subperiods.csv`, `replication_subperiod_fit.csv`, `replication_subperiod_differences.csv`; details in the subperiod subsection of `reports/replication_results.md`.
 
 | Model / slope | 2021–2023 | 2024–2026 | Change (SE), p |
 |---|---|---|---|
@@ -166,7 +166,7 @@ The three paper specifications re-estimated on two nonoverlapping periods of the
 | ONFH + M + SLH | 0.38 / 2.96 | 0.28 / 0.35 | −1.81 / −1.38 | 0.70 / 0.80 |
 | ROD | 0.01 / 1.32 | 0.43 / 0.19 | 0.01 / 0.49 | 0.39 / 0.17 |
 
-- No slope changes significantly and no model is significant in either period; the smallest Wald p is 0.17. The M change at p = 0.051 is p = 0.088 without 10 March 2026 and 0.26 without 2026, and none of the 20 slope-change tests is below the Bonferroni level of 0.01.
+- There is no statistically significant evidence of slope changes, and no model is significant in either period; the smallest Wald p is 0.17. The M change at p = 0.051 is p = 0.088 without 10 March 2026 and 0.26 without 2026, and none of the 20 slope-change tests is below the Bonferroni level of 0.01.
 - 10 March 2026 again drives the later period: without it the 2024–2026 ROD slope is −0.54, the change +0.25 (1.31), p = 0.85, and ROD's adjusted R² falls from 1.32% to −0.04%.
 - The intercept shifts from about −3.7 basis points (p = 0.02) to about +1.4, a change of about +5 basis points (p = 0.03–0.04). This is a change in the level of the last-half-hour drift, not in momentum, and matches the negative Always Long result in Section 4.2.
 - **Bogoev (2025)**, Appendix Table IA1, reports a positive and significant WTI rest-of-day slope for March 2019 to March 2023 in a joint ONFH + ROD regression. The same joint model on our overlapping window (2021-01 to 2023-03) gives ROD +1.33 [−1.38, 4.04] and ONFH −3.37 [−7.10, 0.37]: the signs match, neither slope is significant. The sample (2019–2020 included, with the COVID sell-off), the specification and the table's units differ from ours, so it is context rather than a replication or a contradiction; testing it directly would need 2019–2020 minute data.
@@ -175,16 +175,15 @@ The three paper specifications re-estimated on two nonoverlapping periods of the
 
 ## 5. What drives the results: three recurring facts
 
-1. **10 March 2026.** One crisis-day reversal (ROD −15.4%, LH +4.6%) accounts for more than half of the negative full-sample ROD slope, for all of ROD's positive out-of-sample R², for the worst strategy day (−USD 3,685), and for much of the volatility-regime point estimates. It is genuine data (the next contract made the same moves) and stays in every baseline; every write-up shows the result without it.
-2. **2022 and 2026.** The two high-volatility years hold most high-volatility dates and all of the sign-agreement effect. The project's one positive finding is therefore about how CL closes on large one-directional days during crises, not a general feature of the market.
+1. **10 March 2026.** One crisis-day reversal (ROD −15.4%, LH +4.6%) accounts for more than half of the negative full-sample ROD slope, for all of ROD's positive out-of-sample R², for the worst strategy day (−USD 3,685), for much of the volatility-regime point estimates, for the more negative 2024–2026 ROD estimate in the subperiod comparison, and for the out-of-sample gain of the sign-agreement model (0.82% with it, −0.47% without). It is genuine data (the next contract made the same moves) and stays in every baseline; every write-up shows the result without it.
+2. **2022 and 2026.** The two high-volatility years hold most high-volatility dates and all of the sign-agreement effect (the agree-minus-disagree difference is −1.4 (2.3) without them). The project's one positive finding is therefore about how CL closes on large one-directional days during crises, not a general feature of the market.
 3. **Roll convention and inference choices do not matter.** The paper's volume-crossover rule and the 3-sessions-before-expiry rule differ on 127 days and move no estimate by more than 0.05; Newey-West lags from 0 to 20 change standard errors by at most 10%.
 
 ## 6. Limitations
 
 - **One market, six years, two crises.** The sample is 1,436 days against the paper's 8,336, and its regime variation comes from two episodes.
 - **No quotes.** Trading costs use a spread proxy and a grid; the trade-at-settlement variant bounds what removing the exit spread is worth.
-- **Multiple hypotheses.** Three new hypotheses with several specifications each. The sign-agreement result clears a Bonferroni level in sample and sits at p ≈ 0.05 out of sample; it should be read as a lead for future work, not an established effect.
-- **Pending merge.** Section 4.6 reports the results of PR #39 (#38), which is under review; its tables and figure join the repository when it merges.
+- **Multiple hypotheses.** Three new hypotheses with several specifications each. The five sign-agreement comparisons were fixed in the configuration before the results were read but not registered outside the repository, so the Bonferroni level is an exploratory correction. The result clears it in sample and sits at p ≈ 0.05 out of sample only with 10 March 2026 in the sample; it should be read as a lead for future work, not an established effect.
 - **Reversal mechanism.** The reversal on agreement days is consistent with profit-taking or inventory unwinding before the reference close, but nothing in the data identifies who trades.
 
 ## 7. Differences from the paper
@@ -224,7 +223,7 @@ git lfs pull
 | Realized-variance features (#32) | `python -m src.build_volatility_features --config config/volatility_features.yaml` | `data/processed/cl_volatility_features*` |
 | Volatility regimes (#32) | `python -m src.analyze_volatility_regimes --config config/volatility_regimes.yaml` | `reports/tables/volatility_regimes_*`, `reports/figures/volatility_regimes_*` |
 | Sign agreement (#33) | `python -m src.analyze_sign_agreement --config config/sign_agreement.yaml` | `reports/tables/sign_agreement_*`, `reports/figures/sign_agreement_*` |
-| Checks | `python -m pytest` | 75 tests on this branch; PR #39 adds 11 |
+| Checks | `python -m pytest` | 87 tests |
 
 Each script writes a `*.manifest.json` next to its tables with the settings used and the SHA256 of every input and output, so a rerun can be compared file by file. The notebooks `analysis/04` to `analysis/08` read the saved tables only and display them; they compute nothing the scripts do not. Detailed write-ups: `reports/replication_results.md`, `reports/lh_strategy_results.md`, `reports/on_day_results.md`, `reports/volatility_regimes_results.md`, `reports/sign_agreement_results.md`; data documentation in `data/README.md` and `reports/minute_dataset_handoff.md`.
 

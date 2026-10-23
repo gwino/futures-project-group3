@@ -84,3 +84,17 @@ def test_strategy_positions_respect_the_sign_filters():
 	assert strategy_positions(frame, {"rule": "sign_of_rod", "when": "disagree"}).tolist() == [0, 0, -1, 1, 0]
 	assert strategy_positions(frame, {"rule": "sign_of_day"}).tolist() == [1, -1, -1, 1, 1]
 	assert strategy_positions(frame, {"rule": "sign_of_on"}).tolist() == [1, -1, 1, -1, 0]
+
+
+def test_group_means_equal_plain_means_and_zero_days_and_ties_are_set_aside():
+	from src.analyze_sign_agreement import group_means, hit_rate, regression_sample
+
+	frame = add_terms(features([0.01, -0.01, 0.01, -0.01, 0.0, 0.02], [0.02, -0.02, -0.02, 0.02, 0.01, 0.03], [0.001, -0.002, 0.0, 0.004, 0.005, -0.001]), CONFIG)
+	kept = regression_sample(frame)
+	assert kept["category"].tolist() == ["ON+/DAY+", "ON-/DAY-", "ON+/DAY-", "ON-/DAY+", "ON+/DAY+"]
+	means = group_means(kept, kept["category"], "y", 0)
+	for category, rows in kept.groupby("category"):
+		assert means.loc[category, "mean"] == pytest.approx(rows["y"].mean())
+	share, se, decided = hit_rate(frame["lh_follows_rod"])
+	assert decided == 5 and np.isnan(frame.loc[2, "lh_follows_rod"])   # LH = 0 on the third day: neither hit nor miss
+	assert share == pytest.approx(frame["lh_follows_rod"].dropna().mean()) and se == pytest.approx(np.sqrt(share * (1 - share) / 5))
