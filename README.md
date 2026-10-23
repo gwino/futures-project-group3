@@ -125,6 +125,8 @@ Run from the repository root, after `git lfs pull` (the processed minute data is
 | Closing-period strategy backtest (#30) | `python -m src.backtest_lh_strategy --config config/lh_strategy.yaml` | `config/lh_strategy.yaml` | `reports/tables/lh_strategy_*.csv`, `reports/figures/lh_strategy_*.png`, `reports/lh_strategy_results.md`, `analysis/05_lh_strategy_results.ipynb` |
 | Realized-variance features (#32) | `python -m src.build_volatility_features --config config/volatility_features.yaml` | `config/volatility_features.yaml` | `data/processed/cl_volatility_features*` |
 | Volatility-regime tests (#32) | `python -m src.analyze_volatility_regimes --config config/volatility_regimes.yaml` | `config/volatility_regimes.yaml` | `reports/tables/volatility_regimes_*`, `reports/volatility_regimes_results.md`, `analysis/06_volatility_regimes_results.ipynb` |
+| Sign-agreement tests (#33) | `python -m src.analyze_sign_agreement --config config/sign_agreement.yaml` | `config/sign_agreement.yaml` | `reports/tables/sign_agreement_*`, `reports/sign_agreement_results.md`, `analysis/07_sign_agreement_results.ipynb` |
+| Final report (#33) | assembled from the tables above | | `reports/final_report.md` |
 
 `python -m pytest` runs every check.
 
