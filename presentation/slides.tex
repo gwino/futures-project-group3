@@ -21,9 +21,13 @@
     \item \textbf{LH}: return 13:00--13:30 Chicago time (what we predict)
     \item \textbf{ROD}: return from previous 13:30 to 13:00 (the predictor)
     \item \textbf{ON} / \textbf{DAY}: ROD split at 08:00 into overnight and daytime parts
-    \item \textbf{Slope}: basis points of LH per 1\% of the predictor. Positive is momentum, negative is reversal.
+    \item \textbf{Slope}: basis points of LH per 1\% of the predictor. Positive = momentum, negative = reversal.
   \end{itemize}
-  \textbf{Data:} Databento CME Globex one-minute bars, CL futures, 1,436 trading days, Jan 2021 to Oct 2026. 936 out-of-sample forecasts from Jan 2023.
+  \textbf{Data:} Databento CME one-minute bars, CL futures. 1,436 trading days after the paper's filters.
+  \begin{itemize}
+    \item \textbf{In-sample} (slopes, errors, intervals): all 1,436 days, 4 Jan 2021 to 7 Oct 2026, fitted once.
+    \item \textbf{Out-of-sample} ($R^2$ vs.\ the historical mean): expanding window. The first 500 days (to Dec 2022) are used only for fitting. Then 936 daily forecasts, 4 Jan 2023 to 7 Oct 2026, each fitted on earlier days only.
+  \end{itemize}
 \end{frame}
 
 \begin{frame}{Timeline of the predictors (Chicago time, not to scale)}
@@ -162,7 +166,7 @@
     \item The paper's momentum result does not show up in CL after 2020, and it was weak for CL in the original sample too.
     \item The negative slopes are not distinguishable from zero. We do not know why they lean negative.
     \item One market, six years, two crisis episodes, no quote data (spread is a proxy).
-    \item \textbf{Next:} a magnitude-based agreement score (beyond our terciles), 2019--2020 minute data, other energy futures.
+    \item \textbf{Next:} a magnitude-based agreement score, 2019--2020 minute data, other energy futures.
   \end{itemize}
   \vfill
   \small Reproduce: see the README. No API key needed.
