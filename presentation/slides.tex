@@ -149,7 +149,7 @@
         \item Agree: $-4.5$ bp (1.7), the close reverses
         \item Disagree: $+1.9$ bp (1.7)
       \end{itemize}
-      Comes almost entirely from 2022 and 2026. Out-of-sample support rests on one day.
+      Comes almost entirely from 2022 and 2026. Out-of-sample support rests on one day (10 March 2026, see appendix).
     \end{column}
     \begin{column}{0.58\textwidth}
       \includegraphics[width=\textwidth]{sign_agreement_by_year.png}
@@ -157,7 +157,19 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{One day drives much of the signal}
+\begin{frame}{Takeaways and limits}
+  \begin{itemize}
+    \item The paper's momentum result does not show up in CL after 2020, and it was weak for CL in the original sample too.
+    \item The negative slopes are not distinguishable from zero. We do not know why they lean negative.
+    \item One market, six years, two crisis episodes, no quote data (spread is a proxy).
+    \item \textbf{Next:} a magnitude-based agreement score (beyond our terciles), 2019--2020 minute data, other energy futures.
+  \end{itemize}
+  \vfill
+  \small Reproduce: see the README. No API key needed.
+\end{frame}
+
+\appendix
+\begin{frame}{Appendix: one day drives much of the signal}
   10 March 2026, Strait of Hormuz closure: ROD $-15.4\%$, then LH $+4.6\%$.
   \begin{itemize}
     \item Dropping it moves the ROD slope from $-1.46$ to $-0.67$ (0.66).
@@ -167,18 +179,6 @@
   The data is genuine and stays in every baseline. We report results with and without it.
 \end{frame}
 
-\begin{frame}{Takeaways and limits}
-  \begin{itemize}
-    \item The paper's momentum result does not show up in CL after 2020, and it was weak for CL in the original sample too.
-    \item The negative slopes are not distinguishable from zero. We do not know why they lean negative.
-    \item One market, six years, two crisis episodes, no quote data (spread is a proxy).
-    \item \textbf{Next:} agreement as a continuous two-dimensional score, 2019--2020 minute data, other energy futures.
-  \end{itemize}
-  \vfill
-  \small Reproduce: see the README. No API key needed.
-\end{frame}
-
-\appendix
 \begin{frame}{Appendix: the three-predictor regression}
   \[ LH_t = \alpha + \beta_1\, ONFH_t + \beta_2\, M_t + \beta_3\, SLH_t + \varepsilon_t \]
   Slopes $\times 100$ with 95\% intervals. The paper's intervals are implied from its slopes and $t$-statistics.

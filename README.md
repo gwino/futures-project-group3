@@ -50,7 +50,7 @@ On 10 March 2026, during the Strait of Hormuz closure, ROD was −15.4% and the 
 
 ## Limitations and future work
 
-The sample is one market, six years and two crisis episodes. With no quotes, the spread is a proxy. The agreement result is a lead, not an established effect. Next steps are to measure agreement as a continuous two-dimensional score and not a yes/no label, to test it on 2019–2020 minute data, to extend it to other energy futures, and to measure spreads from quote data.
+The sample is one market, six years and two crisis episodes. With no quotes, the spread is a proxy. The agreement result is a lead, not an established effect. We also tried terciles and an interaction term. Next steps are a magnitude-based agreement score, to test it on 2019–2020 minute data, to extend it to other energy futures, and to measure spreads from quote data.
 
 ## Reproducing the results
 
@@ -82,11 +82,11 @@ The first step needs the raw minute `.dbn` files. The 2021–2024 file is licens
 
 `PLANNING.md` holds the original project plan. The repository also keeps the retired moving-average code and daily and 15-minute preparation scripts (`src/backtest.py`, `src/strategies.py` and others). Nothing in the results above depends on them.
 
-## Future work: a continuous two-dimensional agreement score
+## Future work: a magnitude-based agreement score
 
 Our agreement result uses a yes/no label: a day is "agree" if the overnight (ON) and daytime (DAY) returns have the same sign. That label ignores size. A day with ON +0.01% and DAY +0.02% counts the same as one with ON +2% and DAY +1.8%, although the first is close to noise.
 
-A continuous score would describe each day by how much ON and DAY agree and how much they disagree, as two numbers instead of one label. For example:
+A magnitude-based score would describe each day by how much ON and DAY agree and how much they disagree, as two numbers instead of one label. For example:
 
 - **Agreement amount:** min(|ON|, |DAY|) when the signs match, and zero otherwise.
 - **Disagreement amount:** min(|ON|, |DAY|) when the signs differ, and zero otherwise.
